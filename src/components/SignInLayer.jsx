@@ -1,8 +1,54 @@
 import { Icon } from "@iconify/react/dist/iconify.js";
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthProvider"; // relative import
 
 const SignInLayer = () => {
+  const { user, loading, login, loginWithGoogle } = useAuth();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = location.state?.from || "/";
+
+  // If already logged in, bounce away from /sign-in
+  useEffect(() => {
+    if (!loading && user) {
+      navigate(redirectTo, { replace: true });
+    }
+  }, [user, loading, navigate, redirectTo]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      const normalizedEmail = email.toLowerCase().trim();
+      await login(normalizedEmail, password);
+      navigate(redirectTo, { replace: true }); // <-- redirect after success
+    } catch (err) {
+      setError(err?.message || "Login failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      await loginWithGoogle();
+      navigate(redirectTo, { replace: true }); // <-- redirect after success
+    } catch (err) {
+      setError(err?.message || "Google sign-in failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className='auth bg-base d-flex flex-wrap'>
       <div className='auth-left d-lg-block d-none'>
@@ -21,7 +67,7 @@ const SignInLayer = () => {
               Welcome back! please enter your detail
             </p>
           </div>
-          <form action='#'>
+          <form id='sign-in-form' onSubmit={handleSubmit}>
             <div className='icon-field mb-16'>
               <span className='icon top-50 translate-middle-y'>
                 <Icon icon='mage:email' />
@@ -30,6 +76,9 @@ const SignInLayer = () => {
                 type='email'
                 className='form-control h-56-px bg-neutral-50 radius-12'
                 placeholder='Email'
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
             <div className='position-relative mb-20'>
@@ -42,6 +91,9 @@ const SignInLayer = () => {
                   className='form-control h-56-px bg-neutral-50 radius-12'
                   id='your-password'
                   placeholder='Password'
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
                 />
               </div>
               <span
@@ -62,17 +114,24 @@ const SignInLayer = () => {
                     Remember me{" "}
                   </label>
                 </div>
-                <Link to='#' className='text-primary-600 fw-medium'>
+                <Link to='/forgot-password' className='text-primary-600 fw-medium'>
                   Forgot Password?
                 </Link>
               </div>
             </div>
+
+            {error && (
+              <div className="text-danger text-sm mt-2">
+                {error}
+              </div>
+            )}
+
             <button
               type='submit'
               className='btn btn-primary text-sm btn-sm px-12 py-16 w-100 radius-12 mt-32'
+              disabled={busy}
             >
-              {" "}
-              Sign In
+              {busy ? "Signing in…" : "Sign In"}
             </button>
             <div className='mt-32 center-border-horizontal text-center'>
               <span className='bg-base z-1 px-4'>Or sign in with</span>
@@ -80,16 +139,8 @@ const SignInLayer = () => {
             <div className='mt-32 d-flex align-items-center gap-3'>
               <button
                 type='button'
-                className='fw-semibold text-primary-light py-16 px-24 w-50 border radius-12 text-md d-flex align-items-center justify-content-center gap-12 line-height-1 bg-hover-primary-50'
-              >
-                <Icon
-                  icon='ic:baseline-facebook'
-                  className='text-primary-600 text-xl line-height-1'
-                />
-                Google
-              </button>
-              <button
-                type='button'
+                onClick={handleGoogle}
+                disabled={busy}
                 className='fw-semibold text-primary-light py-16 px-24 w-50 border radius-12 text-md d-flex align-items-center justify-content-center gap-12 line-height-1 bg-hover-primary-50'
               >
                 <Icon

@@ -1,8 +1,87 @@
 import { Icon } from "@iconify/react/dist/iconify.js";
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthProvider";
+import { auth, db } from "../lib/firebase"; // <-- bring in auth to signOut()
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const SignUpLayer = () => {
+  const { register, loginWithGoogle } = useAuth();
+  const navigate = useNavigate();
+
+  const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  function hasEdgeSpaces(str) {
+    return str.length !== str.trim().length; // leading/trailing spaces present
+  }
+
+  async function afterSignUp(user) {
+    // ensure account_type is stored
+    await setDoc(
+      doc(db, "users", user.uid),
+      {
+        account_type: "school_admin",
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    // Important: sign out so the next screen truly requires a fresh password login
+    try { await auth.signOut(); } catch (_) {}
+
+    // popup then redirect
+    window.alert("User has been registered successfully");
+    navigate("/sign-in", { replace: true });
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Guard against passwords with accidental leading/trailing spaces
+      if (hasEdgeSpaces(password)) {
+        throw new Error(
+          "Password cannot start or end with spaces. Please retype it."
+        );
+      }
+      if (password.length < 8) {
+        throw new Error("Password must be at least 8 characters.");
+      }
+
+      const user = await register({
+        email: normalizedEmail,
+        password, // do NOT trim; we already validated edges above
+        displayName: displayName,
+      });
+
+      await afterSignUp(user);
+    } catch (err) {
+      setError(err?.message || "Sign up failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleGoogle = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      const user = await loginWithGoogle();
+      await afterSignUp(user);
+    } catch (err) {
+      setError(err?.message || "Google sign-up failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <section className='auth bg-base d-flex flex-wrap'>
       <div className='auth-left d-lg-block d-none'>
@@ -21,7 +100,8 @@ const SignUpLayer = () => {
               Welcome back! please enter your detail
             </p>
           </div>
-          <form action='#'>
+
+          <form id='sign-up-form' onSubmit={handleSubmit}>
             <div className='icon-field mb-16'>
               <span className='icon top-50 translate-middle-y'>
                 <Icon icon='f7:person' />
@@ -30,8 +110,12 @@ const SignUpLayer = () => {
                 type='text'
                 className='form-control h-56-px bg-neutral-50 radius-12'
                 placeholder='Username'
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                required
               />
             </div>
+
             <div className='icon-field mb-16'>
               <span className='icon top-50 translate-middle-y'>
                 <Icon icon='mage:email' />
@@ -40,8 +124,12 @@ const SignUpLayer = () => {
                 type='email'
                 className='form-control h-56-px bg-neutral-50 radius-12'
                 placeholder='Email'
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
+
             <div className='mb-20'>
               <div className='position-relative '>
                 <div className='icon-field'>
@@ -53,6 +141,9 @@ const SignUpLayer = () => {
                     className='form-control h-56-px bg-neutral-50 radius-12'
                     id='your-password'
                     placeholder='Password'
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
                   />
                 </div>
                 <span
@@ -64,14 +155,15 @@ const SignUpLayer = () => {
                 Your password must have at least 8 characters
               </span>
             </div>
+
             <div className=''>
               <div className='d-flex justify-content-between gap-2'>
                 <div className='form-check style-check d-flex align-items-start'>
                   <input
                     className='form-check-input border border-neutral-300 mt-4'
                     type='checkbox'
-                    defaultValue=''
                     id='condition'
+                    required
                   />
                   <label
                     className='form-check-label text-sm'
@@ -79,39 +171,36 @@ const SignUpLayer = () => {
                   >
                     By creating an account means you agree to the
                     <Link to='#' className='text-primary-600 fw-semibold'>
-                      Terms &amp; Conditions
+                      {" "}Terms &amp; Conditions
                     </Link>{" "}
                     and our
                     <Link to='#' className='text-primary-600 fw-semibold'>
-                      Privacy Policy
+                      {" "}Privacy Policy
                     </Link>
                   </label>
                 </div>
               </div>
             </div>
+
+            {error && <div className='text-danger text-sm mt-2'>{error}</div>}
+
             <button
               type='submit'
               className='btn btn-primary text-sm btn-sm px-12 py-16 w-100 radius-12 mt-32'
+              disabled={busy}
             >
-              {" "}
-              Sign Up
+              {busy ? "Creating…" : "Sign Up"}
             </button>
+
             <div className='mt-32 center-border-horizontal text-center'>
               <span className='bg-base z-1 px-4'>Or sign up with</span>
             </div>
+
             <div className='mt-32 d-flex align-items-center gap-3'>
               <button
                 type='button'
-                className='fw-semibold text-primary-light py-16 px-24 w-50 border radius-12 text-md d-flex align-items-center justify-content-center gap-12 line-height-1 bg-hover-primary-50'
-              >
-                <Icon
-                  icon='ic:baseline-facebook'
-                  className='text-primary-600 text-xl line-height-1'
-                />
-                Google
-              </button>
-              <button
-                type='button'
+                onClick={handleGoogle}
+                disabled={busy}
                 className='fw-semibold text-primary-light py-16 px-24 w-50 border radius-12 text-md d-flex align-items-center justify-content-center gap-12 line-height-1 bg-hover-primary-50'
               >
                 <Icon
@@ -121,6 +210,7 @@ const SignUpLayer = () => {
                 Google
               </button>
             </div>
+
             <div className='mt-32 text-center text-sm'>
               <p className='mb-0'>
                 Already have an account?{" "}
