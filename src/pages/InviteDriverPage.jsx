@@ -14,7 +14,7 @@ const InviteDriverPage = () => {
       <MasterLayout>
 
         {/* Breadcrumb */}
-        <Breadcrumb title="Components / Image Upload" />
+        <Breadcrumb title="Components / Invite Driver" />
 
         {/* InviteDriverLayer */}
         <InviteDriverLayer />
