@@ -15,6 +15,11 @@ import ErrorPage from "./pages/ErrorPage";
 import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
+import InviteSuccessPage from "./pages/InviteSuccessPage";
+
+import DriverRoutesPage from "./pages/DriverRoutesPage";
+
+
 
 // (optional) Forgot password – if you have it, uncomment the import & route
 // import ForgotPasswordPage from "./pages/ForgotPasswordPage";
@@ -36,11 +41,15 @@ function App() {
           <Route path="/sign-in" element={<SignInPage />} />
           <Route path="/sign-up" element={<SignUpPage />} />
           <Route path="/accept-invite" element={<AcceptInvitePage />} />
+          <Route path="/invite-success" element={<InviteSuccessPage />} />
+          
           {/* <Route path="/forgot-password" element={<ForgotPasswordPage />} /> */}
 
           {/* ===== PROTECTED ROOT (login + school required) ===== */}
           <Route path="/" element={secure(<HomePageOne />)} />
           <Route path="/invite-driver" element={secure(<InviteDriverPage />)} />
+          <Route path="/routes" element={secure(<DriverRoutesPage />)} />
+
 
           {/* Create School: must be logged in, school not required */}
           <Route

@@ -155,6 +155,16 @@ const MasterLayout = ({ children }) => {
                 <span>Invite Driver</span>
               </NavLink>
             </li>
+
+            <li>
+              <NavLink
+                to='/routes'
+                className={(navData) => (navData.isActive ? "active-page" : "")}
+              >
+                <Icon icon='mdi:email-outline' className='menu-icon' />
+                <span>Driver Routes</span>
+              </NavLink>
+            </li>            
           </ul>
         </div>
       </aside>
