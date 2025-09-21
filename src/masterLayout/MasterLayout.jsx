@@ -2,7 +2,9 @@ import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react/dist/iconify.js";
 import { Link, NavLink, useLocation, useNavigate } from "react-router-dom"; // ⬅ add useNavigate
 import ThemeToggleButton from "../helper/ThemeToggleButton";
-import { useAuth } from "../auth/AuthProvider"; // ⬅ add
+import { useAuth } from "../auth/AuthProvider"; // ⬅ // inside your sidebar/menu component
+
+
 
 const MasterLayout = ({ children }) => {
   let [sidebarActive, seSidebarActive] = useState(false);
@@ -10,6 +12,9 @@ const MasterLayout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();                  // ⬅ add
   const { logout } = useAuth();                    // ⬅ add
+
+  const { profile } = useAuth();
+  const schoolId = profile?.school_id;  
 
   useEffect(() => {
     const handleDropdownClick = (event) => {
@@ -164,7 +169,21 @@ const MasterLayout = ({ children }) => {
                 <Icon icon='mdi:bus-school' className='menu-icon' />
                 <span>Driver Routes</span>
               </NavLink>
-            </li>          
+            </li>
+
+            {schoolId && (
+              <li>
+                <a
+                  href={`/school-qr/${schoolId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="d-flex align-items-center"
+                >
+                  <Icon icon='mdi:qrcode' className='menu-icon' />
+                  <span>School QR</span>
+                </a>
+              </li>
+            )}                      
           </ul>
         </div>
       </aside>

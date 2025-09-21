@@ -18,6 +18,8 @@ import AcceptInvitePage from "./pages/AcceptInvitePage";
 import InviteSuccessPage from "./pages/InviteSuccessPage";
 
 import DriverRoutesPage from "./pages/DriverRoutesPage";
+import SchoolQRCodePage from "./pages/SchoolQRCodePage";
+
 
 
 
@@ -42,6 +44,8 @@ function App() {
           <Route path="/sign-up" element={<SignUpPage />} />
           <Route path="/accept-invite" element={<AcceptInvitePage />} />
           <Route path="/invite-success" element={<InviteSuccessPage />} />
+          <Route path="/school-qr/:schoolId" element={<SchoolQRCodePage />} />
+
           
           {/* <Route path="/forgot-password" element={<ForgotPasswordPage />} /> */}
 
