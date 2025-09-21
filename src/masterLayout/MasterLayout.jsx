@@ -161,10 +161,10 @@ const MasterLayout = ({ children }) => {
                 to='/routes'
                 className={(navData) => (navData.isActive ? "active-page" : "")}
               >
-                <Icon icon='mdi:email-outline' className='menu-icon' />
+                <Icon icon='mdi:bus-school' className='menu-icon' />
                 <span>Driver Routes</span>
               </NavLink>
-            </li>            
+            </li>          
           </ul>
         </div>
       </aside>

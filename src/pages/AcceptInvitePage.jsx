@@ -64,9 +64,7 @@ export default function AcceptInvitePage() {
     if (isExpired) return 'This invite has expired.';
     if (pwd.trim().length < 8) return 'Password must be at least 8 characters.';
     if (!fullName.trim()) return 'Full name is required.';
-    // Light phone check (optional; you can tighten as needed)
     if (phone && !/^[0-9+\-\s()]{7,}$/.test(phone)) return 'Please enter a valid phone number.';
-    // License & plate can be optional or required—make both required here:
     if (!licenseNo.trim()) return 'License number is required.';
     if (!plateNo.trim()) return 'Plate number is required.';
     return '';
@@ -89,15 +87,20 @@ export default function AcceptInvitePage() {
       });
 
       // 2) Merge driver profile fields into users/{uid}
+      //    ✅ Ensure user is ACTIVATED on creation
       await setDoc(
         doc(db, 'users', user.uid),
         {
+          uid: user.uid,
+          email: String(invite.email || '').toLowerCase().trim(),
           account_type: 'driver',
+          status: 'active',                   // <— activate here
           school_id: invite.school_id || null,
           displayName: fullName.trim(),
           phone: phone.trim(),
           driver_license_no: licenseNo.trim(),
           plate_no: plateNo.trim(),
+          createdAt: serverTimestamp(),       // safe to set; server will keep earliest
           updatedAt: serverTimestamp(),
         },
         { merge: true }
