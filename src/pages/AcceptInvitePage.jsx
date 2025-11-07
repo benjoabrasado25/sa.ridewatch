@@ -88,6 +88,7 @@ export default function AcceptInvitePage() {
 
       // 2) Merge driver profile fields into users/{uid}
       //    ✅ Ensure user is ACTIVATED on creation
+      //    ✅ Use school_ids array to support multiple schools
       await setDoc(
         doc(db, 'users', user.uid),
         {
@@ -95,7 +96,7 @@ export default function AcceptInvitePage() {
           email: String(invite.email || '').toLowerCase().trim(),
           account_type: 'driver',
           status: 'active',                   // <— activate here
-          school_id: invite.school_id || null,
+          school_ids: invite.school_id ? [invite.school_id] : [], // Array of schools
           displayName: fullName.trim(),
           phone: phone.trim(),
           driver_license_no: licenseNo.trim(),

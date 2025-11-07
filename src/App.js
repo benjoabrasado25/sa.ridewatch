@@ -9,7 +9,7 @@ import RequireSchool from "./auth/RequireSchool.jsx";
 
 // === Pages ===
 import HomePageOne from "./pages/HomePageOne";
-import CreateSchoolPage from "./pages/CreateSchoolPage";
+import CreateCompanyPage from "./pages/CreateCompanyPage";
 import InviteDriverPage from "./pages/InviteDriverPage";
 import ErrorPage from "./pages/ErrorPage";
 import SignInPage from "./pages/SignInPage";
@@ -19,6 +19,7 @@ import InviteSuccessPage from "./pages/InviteSuccessPage";
 
 import DriverRoutesPage from "./pages/DriverRoutesPage";
 import SchoolQRCodePage from "./pages/SchoolQRCodePage";
+import SchoolsPage from "./pages/SchoolsPage";
 
 
 
@@ -51,16 +52,17 @@ function App() {
 
           {/* ===== PROTECTED ROOT (login + school required) ===== */}
           <Route path="/" element={secure(<HomePageOne />)} />
+          <Route path="/schools" element={secure(<SchoolsPage />)} />
           <Route path="/invite-driver" element={secure(<InviteDriverPage />)} />
           <Route path="/routes" element={secure(<DriverRoutesPage />)} />
 
 
-          {/* Create School: must be logged in, school not required */}
+          {/* Create Company: must be logged in, company not required */}
           <Route
-            path="/create-school"
+            path="/create-company"
             element={
               <RequireAuth>
-                <CreateSchoolPage />
+                <CreateCompanyPage />
               </RequireAuth>
             }
           />

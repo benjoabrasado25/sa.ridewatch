@@ -1,0 +1,123 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===== HELPER FUNCTIONS =====
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    // Check if the authenticated user owns a company
+    function isCompanyOwner(companyId) {
+      return signedIn()
+        && get(/databases/$(database)/documents/companies/$(companyId)).data.owner_uid == request.auth.uid;
+    }
+
+    // Check if a school belongs to the user's company
+    function isSchoolInMyCompany(schoolId) {
+      let school = get(/databases/$(database)/documents/schools/$(schoolId)).data;
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.company_id == school.company_id;
+    }
+
+    // Check if user's profile has a company
+    function hasCompany() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.company_id != null;
+    }
+
+    // Get user's company ID
+    function myCompanyId() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.company_id;
+    }
+
+    // ===== COMPANIES =====
+    match /companies/{companyId} {
+      // Anyone signed in can read companies (for validation)
+      allow read: if signedIn();
+
+      // Only authenticated users can create companies
+      allow create: if signedIn()
+        && request.resource.data.owner_uid == request.auth.uid;
+
+      // Only company owner can update/delete
+      allow update, delete: if isCompanyOwner(companyId);
+    }
+
+    // ===== USERS =====
+    match /users/{uid} {
+      // A user can always read & write their own document
+      allow read, create, update, delete: if signedIn() && request.auth.uid == uid;
+
+      // Company owner can read all driver documents (filtering happens on frontend)
+      // This is needed because drivers can belong to multiple schools
+      allow read: if signedIn()
+        && hasCompany()
+        && resource.data.account_type == 'driver';
+
+      // Company owner can update drivers if they share at least one school
+      allow update: if signedIn()
+        && hasCompany()
+        && resource.data.account_type == 'driver';
+    }
+
+    // ===== SCHOOLS =====
+    match /schools/{schoolId} {
+      // Anyone signed in can read schools (needed for validation in RequireSchool)
+      allow read: if signedIn();
+
+      // Only users with a company can create schools
+      allow create: if signedIn()
+        && hasCompany()
+        && request.resource.data.company_id == myCompanyId();
+
+      // Only company owner can update/delete schools in their company
+      allow update, delete: if signedIn()
+        && resource.data.company_id != null
+        && isCompanyOwner(resource.data.company_id);
+
+      // ===== ROUTES (subcollection of schools) =====
+      match /routes/{routeId} {
+        // Anyone in the company can read routes
+        allow read: if signedIn() && isSchoolInMyCompany(schoolId);
+
+        // Company members can create routes in their schools
+        allow create: if signedIn() && isSchoolInMyCompany(schoolId);
+
+        // Company members can update/delete routes in their schools
+        allow update, delete: if signedIn() && isSchoolInMyCompany(schoolId);
+      }
+
+      // ===== ACTIVE DRIVERS (subcollection of routes) =====
+      match /routes/{routeId}/active_drivers/{driverId} {
+        // Company members and the driver can read
+        allow read: if signedIn()
+          && (isSchoolInMyCompany(schoolId) || request.auth.uid == driverId);
+
+        // Drivers can create/update/delete their own status
+        allow create, update, delete: if signedIn() && request.auth.uid == driverId;
+
+        // Company members can also manage active drivers
+        allow create, update, delete: if signedIn() && isSchoolInMyCompany(schoolId);
+      }
+    }
+
+    // ===== INVITES =====
+    match /invites/{token} {
+      // Anyone can read invites (needed for AcceptInvitePage)
+      allow read: if true;
+
+      // Only authenticated users can create invites
+      allow create: if signedIn();
+
+      // Only authenticated users can update invites (e.g., marking as accepted)
+      allow update: if signedIn();
+
+      // Only authenticated users can delete invites
+      allow delete: if signedIn();
+    }
+  }
+}

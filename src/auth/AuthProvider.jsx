@@ -1,5 +1,5 @@
 // /src/auth/AuthProvider.jsx
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -34,7 +34,7 @@ export function AuthProvider({ children }) {
         email: u.email,
         displayName: u.displayName,
         photoURL: u.photoURL || "",
-        account_type: "school_admin", // ⬅ add this default
+        account_type: "bus_company", // Default: bus company user
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
         });
@@ -56,10 +56,21 @@ export function AuthProvider({ children }) {
     return () => unsub();
   }, []);
 
+  // Function to refresh profile manually
+  const refreshProfile = useCallback(async () => {
+    if (!user) return;
+    const ref = doc(db, "users", user.uid);
+    const snap = await getDoc(ref);
+    if (snap.exists()) {
+      setProfile(snap.data());
+    }
+  }, [user]);
+
   const value = useMemo(() => ({
     user,
     profile,
     loading,
+    refreshProfile,
     login: (email, password) => signInWithEmailAndPassword(auth, email, password),
     register: async ({ email, password, displayName }) => {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
@@ -73,7 +84,7 @@ export function AuthProvider({ children }) {
       return cred.user;
     },
     logout: () => signOut(auth),
-  }), [user, profile, loading]);
+  }), [user, profile, loading, refreshProfile]);
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
 }

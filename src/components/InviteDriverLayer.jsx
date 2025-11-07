@@ -2,6 +2,7 @@ import { Icon } from "@iconify/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { db } from "../lib/firebase";
+import SchoolSelector from "./SchoolSelector";
 import {
   collection,
   doc,
@@ -45,7 +46,7 @@ function createToken(bytes = 24) {
 
 const InviteDriverLayer = () => {
   const { user, profile, loading } = useAuth();
-  const schoolId = profile?.school_id || null;
+  const schoolId = profile?.current_school_id || null;
 
   const canInvite = useMemo(() => !!user && !!schoolId, [user, schoolId]);
 
@@ -77,10 +78,10 @@ const InviteDriverLayer = () => {
     setDrivers(null);
     setListError("");
 
-    // users where school_id == current && account_type == driver
+    // users where school_ids array contains current schoolId && account_type == driver
     const q = query(
       collection(db, "users"),
-      where("school_id", "==", schoolId),
+      where("school_ids", "array-contains", schoolId),
       where("account_type", "==", "driver")
     );
 
@@ -169,12 +170,17 @@ const InviteDriverLayer = () => {
 
   return (
     <section className="container py-5">
+      {/* School Selector */}
+      <div className="mb-4">
+        <SchoolSelector />
+      </div>
+
       {/* Header */}
       <div className="d-flex align-items-center justify-content-between mb-4">
         <div>
           <h3 className="mb-1">Drivers</h3>
           <p className="text-secondary mb-0">
-            Invite new drivers and manage their status.
+            Invite new drivers and manage their status for the selected school.
           </p>
         </div>
 
@@ -182,7 +188,7 @@ const InviteDriverLayer = () => {
           className="btn btn-primary radius-12 d-flex align-items-center gap-2"
           onClick={openInvite}
           disabled={!canInvite}
-          title={!canInvite ? "You must belong to a school." : "Invite Driver"}
+          title={!canInvite ? "You must select a school." : "Invite Driver"}
         >
           <Icon icon="mingcute:add-line" />
           Invite Driver

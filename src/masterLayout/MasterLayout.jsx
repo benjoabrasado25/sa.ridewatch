@@ -11,10 +11,7 @@ const MasterLayout = ({ children }) => {
   let [mobileMenu, setMobileMenu] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();                  // ⬅ add
-  const { logout } = useAuth();                    // ⬅ add
-
-  const { profile } = useAuth();
-  const schoolId = profile?.school_id;  
+  const { logout } = useAuth();                    // ⬅ add  
 
   useEffect(() => {
     const handleDropdownClick = (event) => {
@@ -153,6 +150,16 @@ const MasterLayout = ({ children }) => {
 
             <li>
               <NavLink
+                to='/schools'
+                className={(navData) => (navData.isActive ? "active-page" : "")}
+              >
+                <Icon icon='mdi:school-outline' className='menu-icon' />
+                <span>Schools</span>
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink
                 to='/invite-driver'
                 className={(navData) => (navData.isActive ? "active-page" : "")}
               >
@@ -169,21 +176,7 @@ const MasterLayout = ({ children }) => {
                 <Icon icon='mdi:bus-school' className='menu-icon' />
                 <span>Driver Routes</span>
               </NavLink>
-            </li>
-
-            {schoolId && (
-              <li>
-                <a
-                  href={`/school-qr/${schoolId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="d-flex align-items-center"
-                >
-                  <Icon icon='mdi:qrcode' className='menu-icon' />
-                  <span>School QR</span>
-                </a>
-              </li>
-            )}                      
+            </li>                      
           </ul>
         </div>
       </aside>
@@ -245,7 +238,7 @@ const MasterLayout = ({ children }) => {
                     <div className='py-12 px-16 radius-8 bg-primary-50 mb-16 d-flex align-items-center justify-content-between gap-2'>
                       <div>
                         <h6 className='text-lg text-primary-light fw-semibold mb-2'>
-                          School Admin
+                          Bus Company
                         </h6>
                         <span className='text-secondary-light fw-medium text-sm'>
                           Admin

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { useAuth } from "../auth/AuthProvider";
 import { db } from "../lib/firebase";
+import SchoolSelector from "./SchoolSelector";
 import {
   addDoc,
   collection,
@@ -38,7 +39,7 @@ function Modal({ open, title, children, onClose }) {
 
 const DriverRoutesLayer = () => {
   const { user, profile, loading } = useAuth();
-  const schoolId = profile?.school_id || null;
+  const schoolId = profile?.current_school_id || null;
 
   const canUse = useMemo(() => !!user && !!schoolId, [user, schoolId]);
 
@@ -138,18 +139,23 @@ const DriverRoutesLayer = () => {
 
   return (
     <section className="container py-5">
+      {/* School Selector */}
+      <div className="mb-4">
+        <SchoolSelector />
+      </div>
+
       <div className="d-flex align-items-center justify-content-between mb-4">
         <div>
           <h3 className="mb-1">Routes</h3>
           <p className="text-secondary mb-0">
-            Manage your school’s routes (create and delete).
+            Manage routes for the selected school (create and delete).
           </p>
         </div>
         <button
           className="btn btn-primary radius-12 d-flex align-items-center gap-2"
           onClick={openAdd}
           disabled={!canUse}
-          title={!canUse ? "You must belong to a school." : "Add Route"}
+          title={!canUse ? "You must select a school." : "Add Route"}
         >
           <Icon icon="mingcute:add-line" />
           Add Route
