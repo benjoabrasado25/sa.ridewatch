@@ -2,11 +2,9 @@ import { Icon } from "@iconify/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { db } from "../lib/firebase";
-import SchoolSelector from "./SchoolSelector";
 import {
   collection,
   doc,
-  getDoc,
   onSnapshot,
   query,
   setDoc,
@@ -47,7 +45,7 @@ function createToken(bytes = 24) {
 
 const InviteDriverLayer = () => {
   const { user, profile, loading } = useAuth();
-  const schoolId = profile?.current_school_id || null;
+  const schoolId = profile?.school_id || null;
 
   const canInvite = useMemo(() => !!user && !!schoolId, [user, schoolId]);
 
@@ -57,11 +55,6 @@ const InviteDriverLayer = () => {
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteError, setInviteError] = useState("");
   const [inviteLink, setInviteLink] = useState("");
-
-  // Assign existing driver modal
-  const [showAssign, setShowAssign] = useState(false);
-  const [allDrivers, setAllDrivers] = useState([]);
-  const [assignError, setAssignError] = useState("");
 
   // Drivers list state
   const [drivers, setDrivers] = useState(null); // null = loading; [] = empty
@@ -78,65 +71,16 @@ const InviteDriverLayer = () => {
     if (!busyInvite) setShowInvite(false);
   };
 
-  const openAssign = async () => {
-    setShowAssign(true);
-    setAssignError("");
-    // Load all drivers (account_type == "driver")
-    try {
-      const q = query(
-        collection(db, "users"),
-        where("account_type", "==", "driver")
-      );
-      const snap = await onSnapshot(q, (snapshot) => {
-        const allDrvs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        setAllDrivers(allDrvs);
-      });
-    } catch (err) {
-      setAssignError(err?.message || "Failed to load drivers");
-    }
-  };
-  const closeAssign = () => setShowAssign(false);
-
-  async function assignDriverToSchool(driverId) {
-    try {
-      const driverDoc = doc(db, "users", driverId);
-      const driverSnap = await getDoc(driverDoc);
-      if (!driverSnap.exists()) {
-        window.alert("Driver not found");
-        return;
-      }
-
-      const driverData = driverSnap.data();
-      const currentSchools = driverData.school_ids || [];
-
-      if (currentSchools.includes(schoolId)) {
-        window.alert("Driver already assigned to this school");
-        return;
-      }
-
-      const updatedSchools = [...currentSchools, schoolId];
-      await updateDoc(driverDoc, {
-        school_ids: updatedSchools,
-        updatedAt: serverTimestamp(),
-      });
-
-      window.alert("Driver assigned to this school successfully!");
-      closeAssign();
-    } catch (err) {
-      window.alert(err?.message || "Failed to assign driver");
-    }
-  }
-
   // Load drivers for this school (live)
   useEffect(() => {
     if (!canInvite) return;
     setDrivers(null);
     setListError("");
 
-    // users where school_ids array contains current schoolId && account_type == driver
+    // users where school_id == current && account_type == driver
     const q = query(
       collection(db, "users"),
-      where("school_ids", "array-contains", schoolId),
+      where("school_id", "==", schoolId),
       where("account_type", "==", "driver")
     );
 
@@ -221,64 +165,28 @@ const InviteDriverLayer = () => {
     }
   }
 
-  async function removeDriverFromSchool(driver) {
-    if (!window.confirm(`Remove ${driver.displayName || driver.email} from this school?`)) {
-      return;
-    }
-
-    try {
-      const currentSchools = driver.school_ids || [];
-      const updatedSchools = currentSchools.filter(id => id !== schoolId);
-
-      await updateDoc(doc(db, "users", driver.id), {
-        school_ids: updatedSchools,
-        updatedAt: serverTimestamp(),
-      });
-
-      window.alert("Driver removed from this school.");
-    } catch (e) {
-      window.alert(e?.message || "Failed to remove driver from school.");
-    }
-  }
-
   if (loading) return null;
 
   return (
     <section className="container py-5">
-      {/* School Selector */}
-      <div className="mb-4">
-        <SchoolSelector />
-      </div>
-
       {/* Header */}
       <div className="d-flex align-items-center justify-content-between mb-4">
         <div>
           <h3 className="mb-1">Drivers</h3>
           <p className="text-secondary mb-0">
-            Invite new drivers and manage their status for the selected school.
+            Invite new drivers and manage their status.
           </p>
         </div>
 
-        <div className="d-flex gap-2">
-          <button
-            className="btn btn-outline-primary radius-12 d-flex align-items-center gap-2"
-            onClick={openAssign}
-            disabled={!canInvite}
-            title={!canInvite ? "You must select a school." : "Assign Existing Driver"}
-          >
-            <Icon icon="mingcute:user-add-line" />
-            Assign Existing Driver
-          </button>
-          <button
-            className="btn btn-primary radius-12 d-flex align-items-center gap-2"
-            onClick={openInvite}
-            disabled={!canInvite}
-            title={!canInvite ? "You must select a school." : "Invite New Driver"}
-          >
-            <Icon icon="mingcute:add-line" />
-            Invite New Driver
-          </button>
-        </div>
+        <button
+          className="btn btn-primary radius-12 d-flex align-items-center gap-2"
+          onClick={openInvite}
+          disabled={!canInvite}
+          title={!canInvite ? "You must belong to a school." : "Invite Driver"}
+        >
+          <Icon icon="mingcute:add-line" />
+          Invite Driver
+        </button>
       </div>
 
       {!canInvite && (
@@ -356,13 +264,7 @@ const InviteDriverLayer = () => {
                             </>
                           )}
                         </button>
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => removeDriverFromSchool(d)}
-                          title="Remove from this school"
-                        >
-                          <Icon icon="mdi:delete" />
-                        </button>
+                        {/* Optional: View / Edit buttons could go here */}
                       </div>
                     </td>
                   </tr>
@@ -435,55 +337,6 @@ const InviteDriverLayer = () => {
             <small className="text-secondary">Link expires in 7 days.</small>
           </div>
         ) : null}
-      </Modal>
-
-      {/* Assign Existing Driver Modal */}
-      <Modal open={showAssign} title="Assign Existing Driver to School" onClose={closeAssign}>
-        {assignError && <div className="alert alert-danger mb-3">{assignError}</div>}
-        <div className="mb-3">
-          <p className="text-secondary">
-            Select a driver who is already registered to assign them to this school.
-          </p>
-        </div>
-        {allDrivers.length === 0 ? (
-          <div className="text-center text-secondary py-3">
-            No registered drivers found. Invite new drivers first.
-          </div>
-        ) : (
-          <div className="list-group">
-            {allDrivers
-              .filter(d => !(d.school_ids || []).includes(schoolId))
-              .map(d => (
-                <div
-                  key={d.id}
-                  className="list-group-item d-flex justify-content-between align-items-center"
-                >
-                  <div>
-                    <div className="fw-bold">{d.displayName || d.email}</div>
-                    <small className="text-secondary">{d.email}</small>
-                    {d.school_ids && d.school_ids.length > 0 && (
-                      <div>
-                        <span className="badge bg-info mt-1">
-                          Already in {d.school_ids.length} school(s)
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <button
-                    className="btn btn-sm btn-primary"
-                    onClick={() => assignDriverToSchool(d.id)}
-                  >
-                    <Icon icon="mingcute:add-line" /> Assign
-                  </button>
-                </div>
-              ))}
-            {allDrivers.filter(d => !(d.school_ids || []).includes(schoolId)).length === 0 && (
-              <div className="text-center text-secondary py-3">
-                All registered drivers are already assigned to this school.
-              </div>
-            )}
-          </div>
-        )}
       </Modal>
     </section>
   );

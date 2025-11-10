@@ -81,8 +81,12 @@ service cloud.firestore {
 
       // ===== ROUTES (subcollection of schools) =====
       match /routes/{routeId} {
-        // Anyone in the company can read routes
-        allow read: if signedIn() && isSchoolInMyCompany(schoolId);
+        // Company members can read routes
+        // OR drivers assigned to this school can read routes
+        allow read: if signedIn()
+          && (isSchoolInMyCompany(schoolId)
+              || (exists(/databases/$(database)/documents/users/$(request.auth.uid))
+                  && schoolId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.school_ids));
 
         // Company members can create routes in their schools
         allow create: if signedIn() && isSchoolInMyCompany(schoolId);
