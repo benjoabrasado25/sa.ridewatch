@@ -58,7 +58,10 @@ const DriverRoutesLayer = () => {
 
   // Load routes realtime
   useEffect(() => {
-    if (!canUse) return;
+    if (!canUse) {
+      setRoutes([]); // Set to empty array instead of null when no school
+      return;
+    }
     setRoutes(null);
     const q = query(
       collection(db, "schools", schoolId, "routes"),
@@ -139,10 +142,12 @@ const DriverRoutesLayer = () => {
 
   return (
     <section className="container py-5">
-      {/* School Selector */}
-      <div className="mb-4">
-        <SchoolSelector />
-      </div>
+      {/* School Selector - only show if user has a school */}
+      {canUse && (
+        <div className="mb-4">
+          <SchoolSelector />
+        </div>
+      )}
 
       <div className="d-flex align-items-center justify-content-between mb-4">
         <div>
@@ -163,8 +168,16 @@ const DriverRoutesLayer = () => {
       </div>
 
       {!canUse && (
-        <div className="alert alert-warning">
-          You don’t have an associated school yet. Please create a school first.
+        <div className="alert alert-warning mb-3 d-flex align-items-start gap-3">
+          <Icon icon="mdi:alert-circle-outline" style={{ fontSize: '24px', marginTop: '2px' }} />
+          <div>
+            <h6 className="mb-2">No School Selected</h6>
+            <p className="mb-2">You don't have an associated school yet. Please create a school first to manage routes.</p>
+            <a href="/schools" className="btn btn-sm btn-warning">
+              <Icon icon="mdi:plus-circle" className="me-1" />
+              Create School
+            </a>
+          </div>
         </div>
       )}
 
@@ -174,12 +187,19 @@ const DriverRoutesLayer = () => {
       {routes === null ? (
         <div className="text-center py-5">
           <div className="spinner-border" role="status" />
+          <p className="text-secondary mt-3">Loading routes...</p>
         </div>
-      ) : routes.length === 0 ? (
-        <div className="text-center text-secondary py-5">
-          No routes yet. Click “Add Route” to create one.
+      ) : routes.length === 0 && canUse ? (
+        <div className="text-center py-5">
+          <Icon icon="mdi:routes" style={{ fontSize: '64px', color: '#9ca3af' }} />
+          <h5 className="mt-3 mb-2">No Routes Yet</h5>
+          <p className="text-secondary mb-4">Get started by creating your first route for this school.</p>
+          <button className="btn btn-primary" onClick={openAdd}>
+            <Icon icon="mingcute:add-line" className="me-2" />
+            Create Your First Route
+          </button>
         </div>
-      ) : (
+      ) : canUse ? (
         <div className="row g-3">
           {routes.map((r) => (
             <div className="col-12 col-md-6 col-xl-4" key={r.id}>
@@ -213,7 +233,7 @@ const DriverRoutesLayer = () => {
             </div>
           ))}
         </div>
-      )}
+      ) : null}
 
       {/* Add Route Modal */}
       <Modal open={showAdd} title="Create Route" onClose={closeAdd}>

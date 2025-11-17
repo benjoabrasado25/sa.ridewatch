@@ -129,7 +129,10 @@ const InviteDriverLayer = () => {
 
   // Load drivers for this school (live)
   useEffect(() => {
-    if (!canInvite) return;
+    if (!canInvite) {
+      setDrivers([]); // Set to empty array instead of null when no school
+      return;
+    }
     setDrivers(null);
     setListError("");
 
@@ -245,10 +248,12 @@ const InviteDriverLayer = () => {
 
   return (
     <section className="container py-5">
-      {/* School Selector */}
-      <div className="mb-4">
-        <SchoolSelector />
-      </div>
+      {/* School Selector - only show if user has a school */}
+      {canInvite && (
+        <div className="mb-4">
+          <SchoolSelector />
+        </div>
+      )}
 
       {/* Header */}
       <div className="d-flex align-items-center justify-content-between mb-4">
@@ -282,8 +287,16 @@ const InviteDriverLayer = () => {
       </div>
 
       {!canInvite && (
-        <div className="alert alert-warning mb-3">
-          You don’t have an associated school yet. Please create a school first.
+        <div className="alert alert-warning mb-3 d-flex align-items-start gap-3">
+          <Icon icon="mdi:alert-circle-outline" style={{ fontSize: '24px', marginTop: '2px' }} />
+          <div>
+            <h6 className="mb-2">No School Selected</h6>
+            <p className="mb-2">You don't have an associated school yet. Please create a school first to invite and manage drivers.</p>
+            <a href="/schools" className="btn btn-sm btn-warning">
+              <Icon icon="mdi:plus-circle" className="me-1" />
+              Create School
+            </a>
+          </div>
         </div>
       )}
 
@@ -293,12 +306,19 @@ const InviteDriverLayer = () => {
       {drivers === null ? (
         <div className="text-center py-5">
           <div className="spinner-border" role="status" />
+          <p className="text-secondary mt-3">Loading drivers...</p>
         </div>
-      ) : drivers.length === 0 ? (
-        <div className="text-center text-secondary py-5">
-          No drivers yet. Click “Invite Driver” to add one.
+      ) : drivers.length === 0 && canInvite ? (
+        <div className="text-center py-5">
+          <Icon icon="mdi:account-off-outline" style={{ fontSize: '64px', color: '#9ca3af' }} />
+          <h5 className="mt-3 mb-2">No Drivers Yet</h5>
+          <p className="text-secondary mb-4">Get started by inviting your first driver to this school.</p>
+          <button className="btn btn-primary" onClick={openInvite}>
+            <Icon icon="mingcute:add-line" className="me-2" />
+            Invite Your First Driver
+          </button>
         </div>
-      ) : (
+      ) : canInvite ? (
         <div className="table-responsive">
           <table className="table align-middle">
             <thead>
@@ -371,7 +391,7 @@ const InviteDriverLayer = () => {
             </tbody>
           </table>
         </div>
-      )}
+      ) : null}
 
       {/* Invite Modal */}
       <Modal open={showInvite} title="Invite Driver" onClose={closeInvite}>

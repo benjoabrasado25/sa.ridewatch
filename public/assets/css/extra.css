@@ -204,3 +204,127 @@ table.dataTable td.dt-type-date {
 .overlay.active::after {
   width: 100%;
 }
+
+/* ==================== Auth Page Modern Styles ==================== */
+.auth-modern {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.auth-left-modern {
+  width: 50%;
+  position: relative;
+}
+
+.auth-right-modern {
+  width: 50%;
+}
+
+@media (max-width: 991.98px) {
+  .auth-left-modern {
+    display: none !important;
+  }
+
+  .auth-right-modern {
+    width: 100%;
+  }
+}
+
+/* Form Input Focus Effects */
+.auth-modern .form-control:focus {
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  outline: none;
+}
+
+/* Button Hover Effects */
+.auth-modern .btn:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  transform: translateY(-2px);
+}
+
+.auth-modern .btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* Loading Animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Smooth Transitions */
+.auth-modern * {
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Card Shadow Animation */
+.auth-modern .bg-white {
+  transition: all 0.3s ease;
+}
+
+.auth-modern .bg-white:hover {
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Gradient Background Animation */
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.auth-left-modern {
+  background-size: 200% 200%;
+  animation: gradient-shift 15s ease infinite;
+}
+
+/* Input Label Animation */
+.auth-modern .form-label {
+  transition: all 0.2s ease;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+/* Error Alert Styling */
+.auth-modern .alert-danger {
+  border-left: 4px solid #dc3545;
+  background-color: #fff5f5;
+  border: 1px solid #feb2b2;
+}
+
+/* Checkbox Styling */
+.auth-modern .form-check-input:checked {
+  background-color: #667eea;
+  border-color: #667eea;
+}
+
+.auth-modern .form-check-input:focus {
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+  border-color: #667eea;
+}
+
+/* Link Hover Effects */
+.auth-modern a {
+  transition: all 0.2s ease;
+}
+
+.auth-modern a:hover {
+  opacity: 0.8;
+  text-decoration: underline !important;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 575.98px) {
+  .auth-modern .bg-white {
+    padding: 2rem !important;
+  }
+
+  .auth-modern h3 {
+    font-size: 1.5rem;
+  }
+}

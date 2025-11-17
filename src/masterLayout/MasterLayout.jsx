@@ -115,22 +115,12 @@ const MasterLayout = ({ children }) => {
           <Icon icon='radix-icons:cross-2' />
         </button>
         <div>
-          <Link to='/' className='sidebar-logo'>
-            <img
-              src='assets/images/logo.png'
-              alt='site logo'
-              className='light-logo'
+          <Link to='/' className='sidebar-logo d-flex align-items-center gap-2'>
+            <Icon
+              icon='mdi:car-multiple'
+              style={{ fontSize: '32px', color: '#667eea' }}
             />
-            <img
-              src='assets/images/logo-light.png'
-              alt='site logo'
-              className='dark-logo'
-            />
-            <img
-              src='assets/images/logo-icon.png'
-              alt='site logo'
-              className='logo-icon'
-            />
+            <span className='fw-bold text-xl' style={{ color: '#667eea' }}>RideWatch</span>
           </Link>
         </div>
         <div className='sidebar-menu-area'>
@@ -227,11 +217,16 @@ const MasterLayout = ({ children }) => {
                     className='d-flex justify-content-center align-items-center rounded-circle'
                     type='button'
                     data-bs-toggle='dropdown'
+                    style={{
+                      width: '40px',
+                      height: '40px',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      border: 'none'
+                    }}
                   >
-                    <img
-                      src='assets/images/user.png'
-                      alt='image_user'
-                      className='w-40-px h-40-px object-fit-cover rounded-circle'
+                    <Icon
+                      icon='mdi:account'
+                      style={{ fontSize: '24px', color: 'white' }}
                     />
                   </button>
                   <div className='dropdown-menu to-top dropdown-menu-sm'>

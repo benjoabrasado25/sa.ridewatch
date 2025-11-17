@@ -40,7 +40,7 @@ function Modal({ open, title, children, onClose, size = "md" }) {
 }
 
 const SchoolsManagementLayer = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const companyId = profile?.company_id || null;
   const currentSchoolId = profile?.current_school_id || null;
 
@@ -153,6 +153,8 @@ const SchoolsManagementLayer = () => {
           { current_school_id: ref.id, updatedAt: serverTimestamp() },
           { merge: true }
         );
+        // Refresh profile to update current_school_id
+        await refreshProfile();
       }
 
       setShowAdd(false);
@@ -203,6 +205,8 @@ const SchoolsManagementLayer = () => {
         { current_school_id: schoolId, updatedAt: serverTimestamp() },
         { merge: true }
       );
+      // Refresh profile to update current_school_id
+      await refreshProfile();
     } catch (e) {
       setErr(e?.message || "Failed to set current school.");
     }
@@ -496,9 +500,19 @@ const SchoolsManagementLayer = () => {
               </button>
             </div>
 
-            <small className="text-secondary">
+            <small className="text-secondary d-block mb-3">
               Scan the QR code or share the school ID for drivers to join this school.
             </small>
+
+            <a
+              href={`/school/${selectedSchool.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-2"
+            >
+              <Icon icon="mdi:open-in-new" />
+              View Public QR Page
+            </a>
           </div>
         )}
       </Modal>

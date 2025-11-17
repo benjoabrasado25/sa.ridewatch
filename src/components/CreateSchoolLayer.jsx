@@ -5,7 +5,7 @@ import { db } from "../lib/firebase";
 import { useAuth } from "../auth/AuthProvider";
 
 const CreateSchoolLayer = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
   const [name, setName] = useState("");
@@ -47,7 +47,10 @@ const CreateSchoolLayer = () => {
         { merge: true }
       );
 
-      // 3) Alert + go to schools page
+      // 3) Refresh the profile to get the updated current_school_id
+      await refreshProfile();
+
+      // 4) Alert + go to schools page
       window.alert("School has been created successfully.");
       navigate("/schools", { replace: true });
     } catch (err) {
