@@ -87,7 +87,7 @@ const InviteDriverLayer = () => {
         collection(db, "users"),
         where("account_type", "==", "driver")
       );
-      const snap = await onSnapshot(q, (snapshot) => {
+      onSnapshot(q, (snapshot) => {
         const allDrvs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         setAllDrivers(allDrvs);
       });
