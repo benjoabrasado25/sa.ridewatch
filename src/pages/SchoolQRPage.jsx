@@ -59,14 +59,137 @@ const SchoolQRPage = () => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        position: 'relative',
+        overflow: 'hidden'
       }}>
-        <div style={{ textAlign: 'center' }}>
-          <div className="spinner-border text-white" role="status" style={{ width: '3rem', height: '3rem' }}>
-            <span className="visually-hidden">Loading...</span>
+        {/* Decorative circles for loading screen */}
+        <div style={{
+          position: 'absolute',
+          width: '400px',
+          height: '400px',
+          borderRadius: '50%',
+          background: 'rgba(255,255,255,0.1)',
+          top: '-150px',
+          right: '-150px'
+        }}></div>
+        <div style={{
+          position: 'absolute',
+          width: '300px',
+          height: '300px',
+          borderRadius: '50%',
+          background: 'rgba(255,255,255,0.08)',
+          bottom: '-100px',
+          left: '-100px'
+        }}></div>
+
+        <div style={{
+          textAlign: 'center',
+          position: 'relative',
+          zIndex: 1
+        }}>
+          {/* Animated Logo */}
+          <div style={{
+            width: '120px',
+            height: '120px',
+            margin: '0 auto 30px',
+            position: 'relative'
+          }}>
+            {/* Outer spinning ring */}
+            <div style={{
+              position: 'absolute',
+              width: '100%',
+              height: '100%',
+              border: '4px solid rgba(255,255,255,0.2)',
+              borderTopColor: 'white',
+              borderRadius: '50%',
+              animation: 'spin 1s linear infinite'
+            }}></div>
+            {/* Inner icon container */}
+            <div style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '80px',
+              height: '80px',
+              background: 'rgba(255,255,255,0.15)',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <Icon icon="mdi:bus-school" style={{ fontSize: '40px', color: 'white' }} />
+            </div>
           </div>
-          <p style={{ color: 'white', marginTop: '20px', fontSize: '16px' }}>Loading school information...</p>
+
+          {/* Brand name */}
+          <h2 style={{
+            color: 'white',
+            fontSize: '28px',
+            fontWeight: '700',
+            marginBottom: '10px',
+            letterSpacing: '1px'
+          }}>RideWatch</h2>
+
+          {/* Loading text */}
+          <p style={{
+            color: 'rgba(255,255,255,0.8)',
+            fontSize: '16px',
+            margin: 0
+          }}>Loading school information...</p>
+
+          {/* Animated dots */}
+          <div style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '8px',
+            marginTop: '20px'
+          }}>
+            <div style={{
+              width: '10px',
+              height: '10px',
+              background: 'white',
+              borderRadius: '50%',
+              animation: 'bounce 1.4s ease-in-out infinite',
+              animationDelay: '0s'
+            }}></div>
+            <div style={{
+              width: '10px',
+              height: '10px',
+              background: 'white',
+              borderRadius: '50%',
+              animation: 'bounce 1.4s ease-in-out infinite',
+              animationDelay: '0.2s'
+            }}></div>
+            <div style={{
+              width: '10px',
+              height: '10px',
+              background: 'white',
+              borderRadius: '50%',
+              animation: 'bounce 1.4s ease-in-out infinite',
+              animationDelay: '0.4s'
+            }}></div>
+          </div>
         </div>
+
+        {/* Keyframe animations */}
+        <style>{`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+          @keyframes bounce {
+            0%, 80%, 100% {
+              transform: scale(0);
+              opacity: 0.5;
+            }
+            40% {
+              transform: scale(1);
+              opacity: 1;
+            }
+          }
+        `}</style>
       </div>
     );
   }
@@ -137,7 +260,8 @@ const SchoolQRPage = () => {
         }}>
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <div className="school-icon" style={{
+            {/* Icon for screen - uses gradient background */}
+            <div className="school-icon screen-only" style={{
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -149,6 +273,20 @@ const SchoolQRPage = () => {
               marginBottom: '20px'
             }}>
               <Icon icon="mdi:school" style={{ fontSize: '40px', color: 'white' }} />
+            </div>
+            {/* Icon for print - uses border instead of background */}
+            <div className="school-icon print-only" style={{
+              display: 'none',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '80px',
+              height: '80px',
+              borderRadius: '50%',
+              border: '3px solid #667eea',
+              marginBottom: '20px',
+              margin: '0 auto 20px'
+            }}>
+              <Icon icon="mdi:school" style={{ fontSize: '40px', color: '#667eea' }} />
             </div>
             <h1 style={{
               fontSize: '32px',
@@ -381,8 +519,6 @@ const SchoolQRPage = () => {
           }
           html, body {
             background: white !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
           }
           /* Hide decorative circles */
           .decorative-circle {
@@ -410,11 +546,12 @@ const SchoolQRPage = () => {
             border-radius: 16px !important;
             padding: 40px 30px !important;
           }
-          /* Ensure school icon prints with color */
-          .school-icon {
-            background: #667eea !important;
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
+          /* Hide screen icon, show print icon */
+          .screen-only {
+            display: none !important;
+          }
+          .print-only {
+            display: inline-flex !important;
           }
           /* Hide copy button in print */
           button[title="Copy School ID"] {
