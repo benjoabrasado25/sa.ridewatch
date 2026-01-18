@@ -259,9 +259,9 @@ const SchoolQRPage = () => {
           padding: '50px 40px'
         }}>
           {/* Header */}
-          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <div className="header-section" style={{ textAlign: 'center', marginBottom: '30px' }}>
             {/* Icon for screen - uses gradient background */}
-            <div className="school-icon screen-only" style={{
+            <div className="school-icon-screen" style={{
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -275,18 +275,16 @@ const SchoolQRPage = () => {
               <Icon icon="mdi:school" style={{ fontSize: '40px', color: 'white' }} />
             </div>
             {/* Icon for print - uses border instead of background */}
-            <div className="school-icon print-only" style={{
-              display: 'none',
+            <div className="school-icon-print" style={{
               alignItems: 'center',
               justifyContent: 'center',
-              width: '80px',
-              height: '80px',
+              width: '70px',
+              height: '70px',
               borderRadius: '50%',
               border: '3px solid #667eea',
-              marginBottom: '20px',
-              margin: '0 auto 20px'
+              margin: '0 auto 15px'
             }}>
-              <Icon icon="mdi:school" style={{ fontSize: '40px', color: '#667eea' }} />
+              <Icon icon="mdi:school" style={{ fontSize: '35px', color: '#667eea' }} />
             </div>
             <h1 style={{
               fontSize: '32px',
@@ -313,7 +311,7 @@ const SchoolQRPage = () => {
 
           {/* Description */}
           {school.description && (
-            <div style={{
+            <div className="description-box" style={{
               backgroundColor: '#f7fafc',
               borderRadius: '12px',
               padding: '20px',
@@ -332,10 +330,10 @@ const SchoolQRPage = () => {
           )}
 
           {/* QR Code */}
-          <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <div style={{
+          <div className="qr-section" style={{ textAlign: 'center', marginBottom: '30px' }}>
+            <div className="qr-code-container" style={{
               display: 'inline-block',
-              padding: '30px',
+              padding: '20px',
               background: 'white',
               borderRadius: '16px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
@@ -344,7 +342,7 @@ const SchoolQRPage = () => {
               <QRCodeCanvas
                 id="school-qr-code"
                 value={window.location.href}
-                size={280}
+                size={220}
                 level="H"
                 includeMargin={true}
               />
@@ -364,7 +362,7 @@ const SchoolQRPage = () => {
           </div>
 
           {/* School ID Section */}
-          <div style={{ marginBottom: '30px' }}>
+          <div className="school-id-section" style={{ marginBottom: '30px' }}>
             <label style={{
               display: 'block',
               textAlign: 'center',
@@ -476,9 +474,9 @@ const SchoolQRPage = () => {
           </div>
 
           {/* Footer */}
-          <div style={{
+          <div className="footer-section" style={{
             textAlign: 'center',
-            paddingTop: '30px',
+            paddingTop: '20px',
             borderTop: '1px solid #e2e8f0'
           }}>
             <div style={{
@@ -512,13 +510,19 @@ const SchoolQRPage = () => {
           margin: 0 !important;
           padding: 0 !important;
         }
+        /* Hide print icon on screen */
+        .school-icon-print {
+          display: none;
+        }
         @media print {
           @page {
             size: A4 portrait;
-            margin: 0.75in;
+            margin: 0.4in;
           }
           html, body {
             background: white !important;
+            margin: 0 !important;
+            padding: 0 !important;
           }
           /* Hide decorative circles */
           .decorative-circle {
@@ -534,28 +538,73 @@ const SchoolQRPage = () => {
             padding: 0 !important;
             min-height: auto !important;
             display: block !important;
+            height: auto !important;
+            overflow: visible !important;
           }
           /* Style the wrapper */
           .qr-page-wrapper {
             max-width: 100% !important;
+            margin: 0 !important;
           }
-          /* Style the card for print - clean border, no shadow */
+          /* Style the card for print - clean border, no shadow, compact */
           .qr-card {
             box-shadow: none !important;
             border: 2px solid #667eea !important;
-            border-radius: 16px !important;
-            padding: 40px 30px !important;
+            border-radius: 12px !important;
+            padding: 20px 15px !important;
+            page-break-inside: avoid !important;
           }
           /* Hide screen icon, show print icon */
-          .screen-only {
+          .school-icon-screen {
             display: none !important;
           }
-          .print-only {
-            display: inline-flex !important;
+          .school-icon-print {
+            display: flex !important;
+          }
+          /* Compact header section */
+          .header-section {
+            margin-bottom: 15px !important;
+          }
+          /* Compact spacing for print */
+          .qr-card h1 {
+            font-size: 22px !important;
+            margin-bottom: 5px !important;
+          }
+          .qr-card p {
+            font-size: 13px !important;
+            margin-bottom: 8px !important;
+          }
+          /* Smaller QR code for print to fit on one page */
+          #school-qr-code {
+            width: 180px !important;
+            height: 180px !important;
+          }
+          /* Reduce QR container padding */
+          .qr-code-container {
+            padding: 15px !important;
+            margin-bottom: 10px !important;
           }
           /* Hide copy button in print */
           button[title="Copy School ID"] {
             display: none !important;
+          }
+          /* Make school ID section compact */
+          .school-id-section {
+            margin-bottom: 15px !important;
+          }
+          .qr-card input[readonly] {
+            padding: 8px !important;
+            font-size: 11px !important;
+          }
+          /* Compact footer */
+          .footer-section {
+            padding-top: 10px !important;
+            margin-top: 10px !important;
+          }
+          /* Description box compact */
+          .description-box {
+            padding: 12px !important;
+            margin-bottom: 15px !important;
           }
         }
       `}</style>
