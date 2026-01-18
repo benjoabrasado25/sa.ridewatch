@@ -7,6 +7,7 @@ import {
   collection,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
   query,
   setDoc,
@@ -62,6 +63,7 @@ const InviteDriverLayer = () => {
   const [showAssign, setShowAssign] = useState(false);
   const [allDrivers, setAllDrivers] = useState([]);
   const [assignError, setAssignError] = useState("");
+  const [assignUnsub, setAssignUnsub] = useState(null); // Track unsubscribe function
 
   // Drivers list state
   const [drivers, setDrivers] = useState(null); // null = loading; [] = empty
@@ -81,21 +83,56 @@ const InviteDriverLayer = () => {
   const openAssign = async () => {
     setShowAssign(true);
     setAssignError("");
-    // Load all drivers (account_type == "driver")
+    setAllDrivers([]);
+
+    // Security fix: Only load drivers that belong to schools in the current user's company
     try {
+      if (!profile?.company_id) {
+        setAssignError("No company associated with your account.");
+        return;
+      }
+
+      // 1. Get all school IDs for the current company
+      const schoolsQuery = query(
+        collection(db, "schools"),
+        where("company_id", "==", profile.company_id)
+      );
+      const schoolsSnap = await getDocs(schoolsQuery);
+      const companySchoolIds = schoolsSnap.docs.map(d => d.id);
+
+      if (companySchoolIds.length === 0) {
+        setAssignError("No schools found for your company.");
+        return;
+      }
+
+      // 2. Query all drivers and filter client-side
+      // (Firestore doesn't support array-contains-any with another array)
       const q = query(
         collection(db, "users"),
         where("account_type", "==", "driver")
       );
-      onSnapshot(q, (snapshot) => {
+      const unsub = onSnapshot(q, (snapshot) => {
         const allDrvs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        setAllDrivers(allDrvs);
+        // Filter: only drivers who have at least one school_id in companySchoolIds
+        const filteredDrivers = allDrvs.filter(driver => {
+          const driverSchools = driver.school_ids || [];
+          return driverSchools.some(sid => companySchoolIds.includes(sid));
+        });
+        setAllDrivers(filteredDrivers);
       });
+      setAssignUnsub(() => unsub); // Store unsubscribe function
     } catch (err) {
       setAssignError(err?.message || "Failed to load drivers");
     }
   };
-  const closeAssign = () => setShowAssign(false);
+  const closeAssign = () => {
+    // Clean up listener when modal closes
+    if (assignUnsub) {
+      assignUnsub();
+      setAssignUnsub(null);
+    }
+    setShowAssign(false);
+  };
 
   async function assignDriverToSchool(driverId) {
     try {
@@ -176,6 +213,21 @@ const InviteDriverLayer = () => {
 
     try {
       setBusyInvite(true);
+
+      // Check if email is already registered as a driver
+      const existingQuery = query(
+        collection(db, "users"),
+        where("email", "==", email),
+        where("account_type", "==", "driver")
+      );
+      const existingSnap = await getDocs(existingQuery);
+
+      if (!existingSnap.empty) {
+        setInviteError("This email is already registered as a driver. Use 'Assign Existing Driver' instead.");
+        setBusyInvite(false);
+        return;
+      }
+
       const token = createToken();
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days

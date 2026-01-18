@@ -1,6 +1,6 @@
 // /src/lib/firebase.js (CRA-friendly)
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence } from "firebase/auth";
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 const config = {
@@ -24,7 +24,6 @@ if (process.env.NODE_ENV !== "production") {
 const app = initializeApp(config);
 const auth = getAuth(app);
 const db = getFirestore(app);
-const googleProvider = new GoogleAuthProvider();
 
 export async function ensureAuthPersistence() {
   try {
@@ -34,4 +33,4 @@ export async function ensureAuthPersistence() {
   }
 }
 
-export { app, auth, db, googleProvider };
+export { app, auth, db };

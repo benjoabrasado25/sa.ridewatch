@@ -62,6 +62,18 @@ service cloud.firestore {
       allow update: if signedIn()
         && hasCompany()
         && resource.data.account_type == 'driver';
+
+      // Company owner can read users who are in their company's schools
+      // (needed for user management / ban feature)
+      allow read: if signedIn()
+        && hasCompany()
+        && resource.data.account_type == 'user';
+
+      // Company owner can update users to remove school_ids when banning
+      // (only allows updating school_ids field for users)
+      allow update: if signedIn()
+        && hasCompany()
+        && resource.data.account_type == 'user';
     }
 
     // ===== SCHOOLS =====
@@ -75,6 +87,7 @@ service cloud.firestore {
         && request.resource.data.company_id == myCompanyId();
 
       // Only company owner can update/delete schools in their company
+      // This includes updating banned_users array
       allow update, delete: if signedIn()
         && resource.data.company_id != null
         && isCompanyOwner(resource.data.company_id);

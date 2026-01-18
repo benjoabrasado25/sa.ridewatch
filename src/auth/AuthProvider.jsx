@@ -4,13 +4,12 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signInWithPopup,
   signOut,
   updateProfile,
 } from "firebase/auth";
 
 // ⬇⬇⬇ use RELATIVE import ⬇⬇⬇
-import { auth, db, googleProvider, ensureAuthPersistence } from "../lib/firebase";
+import { auth, db, ensureAuthPersistence } from "../lib/firebase";
 
 import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
 
@@ -75,11 +74,6 @@ export function AuthProvider({ children }) {
     register: async ({ email, password, displayName }) => {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       if (displayName) await updateProfile(cred.user, { displayName });
-      await ensureUserDoc(cred.user);
-      return cred.user;
-    },
-    loginWithGoogle: async () => {
-      const cred = await signInWithPopup(auth, googleProvider);
       await ensureUserDoc(cred.user);
       return cred.user;
     },

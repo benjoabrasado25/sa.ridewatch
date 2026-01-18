@@ -6,7 +6,7 @@ import { auth, db } from "../lib/firebase"; // <-- bring in auth to signOut()
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const SignUpLayer = () => {
-  const { register, loginWithGoogle } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const [displayName, setDisplayName] = useState("");
@@ -64,19 +64,6 @@ const SignUpLayer = () => {
       await afterSignUp(user);
     } catch (err) {
       setError(err?.message || "Sign up failed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleGoogle = async () => {
-    setError("");
-    setBusy(true);
-    try {
-      const user = await loginWithGoogle();
-      await afterSignUp(user);
-    } catch (err) {
-      setError(err?.message || "Google sign-up failed");
     } finally {
       setBusy(false);
     }
@@ -321,44 +308,6 @@ const SignUpLayer = () => {
                     Create Account
                   </>
                 )}
-              </button>
-
-              {/* Divider */}
-              <div className='position-relative text-center my-4'>
-                <hr style={{ borderColor: '#e2e8f0' }} />
-                <span
-                  className='position-absolute top-50 start-50 translate-middle px-3 bg-white text-muted'
-                  style={{ fontSize: '14px' }}
-                >
-                  Or sign up with
-                </span>
-              </div>
-
-              {/* Google Sign Up */}
-              <button
-                type='button'
-                onClick={handleGoogle}
-                disabled={busy}
-                className='btn w-100 py-3 fw-semibold d-flex align-items-center justify-content-center gap-2'
-                style={{
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '12px',
-                  backgroundColor: 'white',
-                  color: '#4a5568',
-                  fontSize: '15px',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.borderColor = '#667eea';
-                  e.target.style.backgroundColor = '#f7fafc';
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.borderColor = '#e2e8f0';
-                  e.target.style.backgroundColor = 'white';
-                }}
-              >
-                <Icon icon='logos:google-icon' style={{ fontSize: '20px' }} />
-                Sign up with Google
               </button>
 
               {/* Sign In Link */}

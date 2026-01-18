@@ -13,6 +13,8 @@ import {
   doc,
   serverTimestamp,
   setDoc,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { QRCodeCanvas } from "qrcode.react";
 
@@ -51,8 +53,15 @@ const SchoolsManagementLayer = () => {
   const [showAdd, setShowAdd] = useState(false);
   const [showEdit, setShowEdit] = useState(false);
   const [showQR, setShowQR] = useState(false);
+  const [showUsers, setShowUsers] = useState(false);
   const [selectedSchool, setSelectedSchool] = useState(null);
   const [busy, setBusy] = useState(false);
+
+  // Users management state
+  const [schoolUsers, setSchoolUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [usersError, setUsersError] = useState("");
+  const [usersUnsub, setUsersUnsub] = useState(null); // Track unsubscribe function
 
   // Form state
   const [form, setForm] = useState({
@@ -105,6 +114,66 @@ const SchoolsManagementLayer = () => {
     setShowQR(true);
   }
 
+  // Open Users Modal
+  function openUsers(school) {
+    setSelectedSchool(school);
+    setShowUsers(true);
+    setUsersError("");
+    setSchoolUsers([]);
+    setLoadingUsers(true);
+
+    // Query users who have joined this school (account_type == "user")
+    const q = query(
+      collection(db, "users"),
+      where("school_ids", "array-contains", school.id),
+      where("account_type", "==", "user")
+    );
+
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const users = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        setSchoolUsers(users);
+        setLoadingUsers(false);
+      },
+      (e) => {
+        setUsersError(e?.message || "Failed to load users.");
+        setLoadingUsers(false);
+      }
+    );
+
+    // Store unsubscribe function to clean up when modal closes
+    setUsersUnsub(() => unsub);
+  }
+
+  // Ban user from school
+  async function banUserFromSchool(userId, userName) {
+    if (!selectedSchool) return;
+
+    const ok = window.confirm(
+      `Ban "${userName || 'this user'}" from ${selectedSchool.name}? They will no longer be able to see routes from this school.`
+    );
+    if (!ok) return;
+
+    try {
+      // Add user to banned_users array in school document
+      await updateDoc(doc(db, "schools", selectedSchool.id), {
+        banned_users: arrayUnion(userId),
+        updatedAt: serverTimestamp(),
+      });
+
+      // Remove this school from user's school_ids
+      await updateDoc(doc(db, "users", userId), {
+        school_ids: arrayRemove(selectedSchool.id),
+        updatedAt: serverTimestamp(),
+      });
+
+      window.alert(`User has been banned from ${selectedSchool.name}.`);
+    } catch (e) {
+      window.alert(e?.message || "Failed to ban user.");
+    }
+  }
+
   // Close Modals
   function closeAdd() {
     if (!busy) setShowAdd(false);
@@ -118,6 +187,16 @@ const SchoolsManagementLayer = () => {
   function closeQR() {
     setShowQR(false);
     setSelectedSchool(null);
+  }
+  function closeUsers() {
+    // Clean up listener when modal closes
+    if (usersUnsub) {
+      usersUnsub();
+      setUsersUnsub(null);
+    }
+    setShowUsers(false);
+    setSelectedSchool(null);
+    setSchoolUsers([]);
   }
 
   // Submit Add School
@@ -328,6 +407,13 @@ const SchoolsManagementLayer = () => {
                         )}
                         <button
                           className="btn btn-sm btn-outline-secondary"
+                          onClick={() => openUsers(school)}
+                          title="View Users"
+                        >
+                          <Icon icon="mdi:account-group-outline" />
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-secondary"
                           onClick={() => openQR(school)}
                           title="View QR Code"
                         >
@@ -513,6 +599,74 @@ const SchoolsManagementLayer = () => {
               <Icon icon="mdi:open-in-new" />
               View Public QR Page
             </a>
+          </div>
+        )}
+      </Modal>
+
+      {/* Users Management Modal */}
+      <Modal open={showUsers} title={`Users - ${selectedSchool?.name || ""}`} onClose={closeUsers} size="lg">
+        {selectedSchool && (
+          <div>
+            <p className="text-secondary mb-3">
+              Manage users who have joined this school. You can ban users to prevent them from seeing routes.
+            </p>
+
+            {usersError && <div className="alert alert-danger">{usersError}</div>}
+
+            {loadingUsers ? (
+              <div className="text-center py-4">
+                <div className="spinner-border" role="status" />
+                <p className="text-secondary mt-2">Loading users...</p>
+              </div>
+            ) : schoolUsers.length === 0 ? (
+              <div className="text-center py-4">
+                <Icon icon="mdi:account-off-outline" style={{ fontSize: '48px', color: '#9ca3af' }} />
+                <p className="text-secondary mt-2">No users have joined this school yet.</p>
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="table align-middle">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 36 }}></th>
+                      <th>Name</th>
+                      <th>Email</th>
+                      <th>Joined</th>
+                      <th style={{ width: 120 }}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {schoolUsers.map((u) => {
+                      const joinedDate = u.createdAt?.toDate?.()
+                        ? u.createdAt.toDate().toLocaleDateString()
+                        : "—";
+                      return (
+                        <tr key={u.id}>
+                          <td>
+                            <div className="avatar avatar-sm rounded-circle bg-light d-flex align-items-center justify-content-center">
+                              <Icon icon="mdi:account" />
+                            </div>
+                          </td>
+                          <td>{u.displayName || "—"}</td>
+                          <td>{u.email || "—"}</td>
+                          <td>{joinedDate}</td>
+                          <td>
+                            <button
+                              className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                              onClick={() => banUserFromSchool(u.id, u.displayName || u.email)}
+                              title="Ban user from this school"
+                            >
+                              <Icon icon="mdi:cancel" />
+                              Ban
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </Modal>

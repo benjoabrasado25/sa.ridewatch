@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider"; // relative import
 
 const SignInLayer = () => {
-  const { user, loading, login, loginWithGoogle } = useAuth();
+  const { user, loading, login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -31,19 +31,6 @@ const SignInLayer = () => {
       navigate(redirectTo, { replace: true }); // <-- redirect after success
     } catch (err) {
       setError(err?.message || "Login failed");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleGoogle = async () => {
-    setError("");
-    setBusy(true);
-    try {
-      await loginWithGoogle();
-      navigate(redirectTo, { replace: true }); // <-- redirect after success
-    } catch (err) {
-      setError(err?.message || "Google sign-in failed");
     } finally {
       setBusy(false);
     }
@@ -253,44 +240,6 @@ const SignInLayer = () => {
                     Sign In
                   </>
                 )}
-              </button>
-
-              {/* Divider */}
-              <div className='position-relative text-center my-4'>
-                <hr style={{ borderColor: '#e2e8f0' }} />
-                <span
-                  className='position-absolute top-50 start-50 translate-middle px-3 bg-white text-muted'
-                  style={{ fontSize: '14px' }}
-                >
-                  Or continue with
-                </span>
-              </div>
-
-              {/* Google Sign In */}
-              <button
-                type='button'
-                onClick={handleGoogle}
-                disabled={busy}
-                className='btn w-100 py-3 fw-semibold d-flex align-items-center justify-content-center gap-2'
-                style={{
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '12px',
-                  backgroundColor: 'white',
-                  color: '#4a5568',
-                  fontSize: '15px',
-                  transition: 'all 0.3s ease'
-                }}
-                onMouseOver={(e) => {
-                  e.target.style.borderColor = '#667eea';
-                  e.target.style.backgroundColor = '#f7fafc';
-                }}
-                onMouseOut={(e) => {
-                  e.target.style.borderColor = '#e2e8f0';
-                  e.target.style.backgroundColor = 'white';
-                }}
-              >
-                <Icon icon='logos:google-icon' style={{ fontSize: '20px' }} />
-                Sign in with Google
               </button>
 
               {/* Sign Up Link */}
