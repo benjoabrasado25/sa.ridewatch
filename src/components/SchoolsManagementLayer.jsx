@@ -59,9 +59,12 @@ const SchoolsManagementLayer = () => {
 
   // Users management state
   const [schoolUsers, setSchoolUsers] = useState([]);
+  const [bannedUsers, setBannedUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
+  const [loadingBanned, setLoadingBanned] = useState(false);
   const [usersError, setUsersError] = useState("");
   const [usersUnsub, setUsersUnsub] = useState(null); // Track unsubscribe function
+  const [usersTab, setUsersTab] = useState("active"); // "active" or "banned"
 
   // Form state
   const [form, setForm] = useState({
@@ -115,12 +118,15 @@ const SchoolsManagementLayer = () => {
   }
 
   // Open Users Modal
-  function openUsers(school) {
+  async function openUsers(school) {
     setSelectedSchool(school);
     setShowUsers(true);
     setUsersError("");
     setSchoolUsers([]);
+    setBannedUsers([]);
     setLoadingUsers(true);
+    setLoadingBanned(true);
+    setUsersTab("active");
 
     // Query users who have joined this school (account_type == "user")
     const q = query(
@@ -144,6 +150,30 @@ const SchoolsManagementLayer = () => {
 
     // Store unsubscribe function to clean up when modal closes
     setUsersUnsub(() => unsub);
+
+    // Load banned users from school document
+    try {
+      const schoolSnap = await import("firebase/firestore").then(({ getDoc }) =>
+        getDoc(doc(db, "schools", school.id))
+      );
+      if (schoolSnap.exists()) {
+        const bannedIds = schoolSnap.data()?.banned_users || [];
+        if (bannedIds.length > 0) {
+          // Fetch user details for banned users
+          const { getDocs } = await import("firebase/firestore");
+          const bannedQ = query(
+            collection(db, "users"),
+            where("__name__", "in", bannedIds.slice(0, 10)) // Firestore limit: 10
+          );
+          const bannedSnap = await getDocs(bannedQ);
+          const banned = bannedSnap.docs.map((d) => ({ id: d.id, ...d.data() }));
+          setBannedUsers(banned);
+        }
+      }
+    } catch (e) {
+      console.error("Error loading banned users:", e);
+    }
+    setLoadingBanned(false);
   }
 
   // Ban user from school
@@ -174,6 +204,28 @@ const SchoolsManagementLayer = () => {
     }
   }
 
+  // Unban user from school
+  async function unbanUserFromSchool(userId, userName) {
+    if (!selectedSchool) return;
+
+    const ok = window.confirm(
+      `Unban "${userName || 'this user'}" from ${selectedSchool.name}? They will be able to rejoin and see routes again.`
+    );
+    if (!ok) return;
+
+    try {
+      // Remove user from banned_users array in school document
+      await updateDoc(doc(db, "schools", selectedSchool.id), {
+        banned_users: arrayRemove(userId),
+        updatedAt: serverTimestamp(),
+      });
+
+      window.alert(`User has been unbanned from ${selectedSchool.name}. They can now rejoin.`);
+    } catch (e) {
+      window.alert(e?.message || "Failed to unban user.");
+    }
+  }
+
   // Close Modals
   function closeAdd() {
     if (!busy) setShowAdd(false);
@@ -197,6 +249,8 @@ const SchoolsManagementLayer = () => {
     setShowUsers(false);
     setSelectedSchool(null);
     setSchoolUsers([]);
+    setBannedUsers([]);
+    setUsersTab("active");
   }
 
   // Submit Add School
@@ -611,61 +665,139 @@ const SchoolsManagementLayer = () => {
               Manage users who have joined this school. You can ban users to prevent them from seeing routes.
             </p>
 
+            {/* Tabs */}
+            <ul className="nav nav-tabs mb-3">
+              <li className="nav-item">
+                <button
+                  className={`nav-link ${usersTab === "active" ? "active" : ""}`}
+                  onClick={() => setUsersTab("active")}
+                >
+                  Active Users ({schoolUsers.length})
+                </button>
+              </li>
+              <li className="nav-item">
+                <button
+                  className={`nav-link ${usersTab === "banned" ? "active" : ""}`}
+                  onClick={() => setUsersTab("banned")}
+                >
+                  Banned Users ({bannedUsers.length})
+                </button>
+              </li>
+            </ul>
+
             {usersError && <div className="alert alert-danger">{usersError}</div>}
 
-            {loadingUsers ? (
-              <div className="text-center py-4">
-                <div className="spinner-border" role="status" />
-                <p className="text-secondary mt-2">Loading users...</p>
-              </div>
-            ) : schoolUsers.length === 0 ? (
-              <div className="text-center py-4">
-                <Icon icon="mdi:account-off-outline" style={{ fontSize: '48px', color: '#9ca3af' }} />
-                <p className="text-secondary mt-2">No users have joined this school yet.</p>
-              </div>
-            ) : (
-              <div className="table-responsive">
-                <table className="table align-middle">
-                  <thead>
-                    <tr>
-                      <th style={{ width: 36 }}></th>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Joined</th>
-                      <th style={{ width: 120 }}>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {schoolUsers.map((u) => {
-                      const joinedDate = u.createdAt?.toDate?.()
-                        ? u.createdAt.toDate().toLocaleDateString()
-                        : "—";
-                      return (
-                        <tr key={u.id}>
-                          <td>
-                            <div className="avatar avatar-sm rounded-circle bg-light d-flex align-items-center justify-content-center">
-                              <Icon icon="mdi:account" />
-                            </div>
-                          </td>
-                          <td>{u.displayName || "—"}</td>
-                          <td>{u.email || "—"}</td>
-                          <td>{joinedDate}</td>
-                          <td>
-                            <button
-                              className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
-                              onClick={() => banUserFromSchool(u.id, u.displayName || u.email)}
-                              title="Ban user from this school"
-                            >
-                              <Icon icon="mdi:cancel" />
-                              Ban
-                            </button>
-                          </td>
+            {/* Active Users Tab */}
+            {usersTab === "active" && (
+              <>
+                {loadingUsers ? (
+                  <div className="text-center py-4">
+                    <div className="spinner-border" role="status" />
+                    <p className="text-secondary mt-2">Loading users...</p>
+                  </div>
+                ) : schoolUsers.length === 0 ? (
+                  <div className="text-center py-4">
+                    <Icon icon="mdi:account-off-outline" style={{ fontSize: '48px', color: '#9ca3af' }} />
+                    <p className="text-secondary mt-2">No users have joined this school yet.</p>
+                  </div>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table align-middle">
+                      <thead>
+                        <tr>
+                          <th style={{ width: 36 }}></th>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>Joined</th>
+                          <th style={{ width: 120 }}>Actions</th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody>
+                        {schoolUsers.map((u) => {
+                          const joinedDate = u.createdAt?.toDate?.()
+                            ? u.createdAt.toDate().toLocaleDateString()
+                            : "—";
+                          return (
+                            <tr key={u.id}>
+                              <td>
+                                <div className="avatar avatar-sm rounded-circle bg-light d-flex align-items-center justify-content-center">
+                                  <Icon icon="mdi:account" />
+                                </div>
+                              </td>
+                              <td>{u.displayName || "—"}</td>
+                              <td>{u.email || "—"}</td>
+                              <td>{joinedDate}</td>
+                              <td>
+                                <button
+                                  className="btn btn-sm btn-outline-danger d-flex align-items-center gap-1"
+                                  onClick={() => banUserFromSchool(u.id, u.displayName || u.email)}
+                                  title="Ban user from this school"
+                                >
+                                  <Icon icon="mdi:cancel" />
+                                  Ban
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Banned Users Tab */}
+            {usersTab === "banned" && (
+              <>
+                {loadingBanned ? (
+                  <div className="text-center py-4">
+                    <div className="spinner-border" role="status" />
+                    <p className="text-secondary mt-2">Loading banned users...</p>
+                  </div>
+                ) : bannedUsers.length === 0 ? (
+                  <div className="text-center py-4">
+                    <Icon icon="mdi:account-check-outline" style={{ fontSize: '48px', color: '#22c55e' }} />
+                    <p className="text-secondary mt-2">No banned users.</p>
+                  </div>
+                ) : (
+                  <div className="table-responsive">
+                    <table className="table align-middle">
+                      <thead>
+                        <tr>
+                          <th style={{ width: 36 }}></th>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th style={{ width: 120 }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {bannedUsers.map((u) => (
+                          <tr key={u.id}>
+                            <td>
+                              <div className="avatar avatar-sm rounded-circle bg-danger-subtle d-flex align-items-center justify-content-center">
+                                <Icon icon="mdi:account-cancel" className="text-danger" />
+                              </div>
+                            </td>
+                            <td>{u.displayName || "—"}</td>
+                            <td>{u.email || "—"}</td>
+                            <td>
+                              <button
+                                className="btn btn-sm btn-outline-success d-flex align-items-center gap-1"
+                                onClick={() => unbanUserFromSchool(u.id, u.displayName || u.email)}
+                                title="Unban user"
+                              >
+                                <Icon icon="mdi:account-check" />
+                                Unban
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
