@@ -226,7 +226,11 @@ const SchoolsManagementLayer = () => {
         updatedAt: serverTimestamp(),
       });
 
-      // Update local state - remove from banned, will appear in active via onSnapshot
+      // Find the user in bannedUsers and move them to schoolUsers
+      const unbannedUser = bannedUsers.find((u) => u.id === userId);
+      if (unbannedUser) {
+        setSchoolUsers((prev) => [...prev, unbannedUser]);
+      }
       setBannedUsers((prev) => prev.filter((u) => u.id !== userId));
 
       window.alert(`User has been unbanned and restored to ${selectedSchool.name}.`);
