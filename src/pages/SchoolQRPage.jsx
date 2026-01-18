@@ -90,7 +90,7 @@ const SchoolQRPage = () => {
   }
 
   return (
-    <div style={{
+    <div className="qr-page-container" style={{
       minHeight: '100vh',
       display: 'flex',
       alignItems: 'center',
@@ -101,7 +101,7 @@ const SchoolQRPage = () => {
       overflow: 'hidden'
     }}>
       {/* Decorative circles */}
-      <div style={{
+      <div className="decorative-circle" style={{
         position: 'absolute',
         width: '400px',
         height: '400px',
@@ -111,7 +111,7 @@ const SchoolQRPage = () => {
         right: '-150px',
         zIndex: 0
       }}></div>
-      <div style={{
+      <div className="decorative-circle" style={{
         position: 'absolute',
         width: '300px',
         height: '300px',
@@ -122,14 +122,14 @@ const SchoolQRPage = () => {
         zIndex: 0
       }}></div>
 
-      <div style={{
+      <div className="qr-page-wrapper" style={{
         position: 'relative',
         zIndex: 1,
         width: '100%',
         maxWidth: '600px',
         margin: '0 auto'
       }}>
-        <div style={{
+        <div className="qr-card" style={{
           background: 'white',
           borderRadius: '24px',
           boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
@@ -137,7 +137,7 @@ const SchoolQRPage = () => {
         }}>
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-            <div style={{
+            <div className="school-icon" style={{
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -278,7 +278,7 @@ const SchoolQRPage = () => {
           </div>
 
           {/* Action Buttons */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '30px' }}>
+          <div className="action-buttons" style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '30px' }}>
             <button
               onClick={handleDownloadQR}
               style={{
@@ -375,13 +375,49 @@ const SchoolQRPage = () => {
           padding: 0 !important;
         }
         @media print {
-          body {
-            background: white !important;
+          @page {
+            size: A4 portrait;
+            margin: 0.75in;
           }
-          div[style*="position: absolute"] {
+          html, body {
+            background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          /* Hide decorative circles */
+          .decorative-circle {
             display: none !important;
           }
-          button {
+          /* Hide action buttons */
+          .action-buttons {
+            display: none !important;
+          }
+          /* Style the main container for print */
+          .qr-page-container {
+            background: white !important;
+            padding: 0 !important;
+            min-height: auto !important;
+            display: block !important;
+          }
+          /* Style the wrapper */
+          .qr-page-wrapper {
+            max-width: 100% !important;
+          }
+          /* Style the card for print - clean border, no shadow */
+          .qr-card {
+            box-shadow: none !important;
+            border: 2px solid #667eea !important;
+            border-radius: 16px !important;
+            padding: 40px 30px !important;
+          }
+          /* Ensure school icon prints with color */
+          .school-icon {
+            background: #667eea !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          /* Hide copy button in print */
+          button[title="Copy School ID"] {
             display: none !important;
           }
         }
