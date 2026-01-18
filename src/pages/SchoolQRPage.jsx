@@ -260,29 +260,32 @@ const SchoolQRPage = () => {
         }}>
           {/* Header */}
           <div className="header-section" style={{ textAlign: 'center', marginBottom: '30px' }}>
-            {/* Icon for screen - uses gradient background */}
+            {/* Screen Icon - with gradient background */}
             <div className="school-icon-screen" style={{
               display: 'inline-flex',
               alignItems: 'center',
               justifyContent: 'center',
-              width: '80px',
-              height: '80px',
+              width: '90px',
+              height: '90px',
               borderRadius: '50%',
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)',
               marginBottom: '20px'
             }}>
-              <Icon icon="mdi:school" style={{ fontSize: '40px', color: 'white' }} />
+              <Icon icon="mdi:school" style={{ fontSize: '45px', color: 'white' }} />
             </div>
-            {/* Icon for print - uses border instead of background */}
+            {/* Print Icon - with border instead of gradient (borders print, backgrounds don't) */}
             <div className="school-icon-print" style={{
+              display: 'none',
               alignItems: 'center',
               justifyContent: 'center',
               width: '70px',
               height: '70px',
               borderRadius: '50%',
               border: '3px solid #667eea',
-              margin: '0 auto 15px'
+              marginBottom: '15px',
+              marginLeft: 'auto',
+              marginRight: 'auto'
             }}>
               <Icon icon="mdi:school" style={{ fontSize: '35px', color: '#667eea' }} />
             </div>
@@ -297,7 +300,7 @@ const SchoolQRPage = () => {
               <p style={{
                 color: '#718096',
                 fontSize: '15px',
-                marginTop: '10px',
+                margin: '0',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -314,8 +317,9 @@ const SchoolQRPage = () => {
             <div className="description-box" style={{
               backgroundColor: '#f7fafc',
               borderRadius: '12px',
-              padding: '20px',
-              marginBottom: '30px'
+              padding: '15px 20px',
+              marginBottom: '25px',
+              border: '1px solid #e2e8f0'
             }}>
               <p style={{
                 margin: 0,
@@ -330,50 +334,51 @@ const SchoolQRPage = () => {
           )}
 
           {/* QR Code */}
-          <div className="qr-section" style={{ textAlign: 'center', marginBottom: '30px' }}>
+          <div className="qr-section" style={{ textAlign: 'center', marginBottom: '20px' }}>
             <div className="qr-code-container" style={{
               display: 'inline-block',
-              padding: '20px',
+              padding: '15px',
               background: 'white',
-              borderRadius: '16px',
+              borderRadius: '12px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-              marginBottom: '15px'
+              border: '1px solid #e2e8f0',
+              marginBottom: '10px'
             }}>
               <QRCodeCanvas
                 id="school-qr-code"
                 value={window.location.href}
-                size={220}
+                size={180}
                 level="H"
-                includeMargin={true}
+                includeMargin={false}
               />
             </div>
-            <p style={{
+            <p className="qr-instruction" style={{
               color: '#718096',
-              fontSize: '14px',
-              margin: '15px 0 0 0',
+              fontSize: '13px',
+              margin: '10px 0 0 0',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '6px'
+              gap: '5px'
             }}>
-              <Icon icon="mdi:information" style={{ fontSize: '16px' }} />
-              Scan this QR Code in Ridewatch App so you can start tracking buses.
+              <Icon icon="mdi:information" style={{ fontSize: '14px' }} />
+              Scan this QR Code in Ridewatch App to start tracking buses.
             </p>
           </div>
 
           {/* School ID Section */}
-          <div className="school-id-section" style={{ marginBottom: '30px' }}>
+          <div className="school-id-section" style={{ marginBottom: '20px' }}>
             <label style={{
               display: 'block',
               textAlign: 'center',
               fontWeight: '600',
               color: '#4a5568',
-              marginBottom: '12px',
-              fontSize: '14px'
+              marginBottom: '8px',
+              fontSize: '13px'
             }}>
               School ID
             </label>
-            <div style={{ display: 'flex', gap: '10px' }}>
+            <div style={{ display: 'flex', gap: '8px' }}>
               <input
                 type="text"
                 readOnly
@@ -382,21 +387,21 @@ const SchoolQRPage = () => {
                   flex: 1,
                   textAlign: 'center',
                   backgroundColor: '#f7fafc',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '12px',
-                  padding: '14px',
-                  fontSize: '14px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '10px',
+                  fontSize: '12px',
                   fontFamily: 'monospace',
-                  letterSpacing: '1px',
+                  letterSpacing: '0.5px',
                   color: '#2d3748'
                 }}
               />
               <button
                 onClick={copySchoolId}
                 style={{
-                  minWidth: '50px',
-                  border: '2px solid #e2e8f0',
-                  borderRadius: '12px',
+                  minWidth: '40px',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
                   background: 'white',
                   cursor: 'pointer',
                   display: 'flex',
@@ -408,7 +413,7 @@ const SchoolQRPage = () => {
                 onMouseOut={(e) => e.target.style.borderColor = '#e2e8f0'}
                 title="Copy School ID"
               >
-                <Icon icon="mdi:content-copy" style={{ fontSize: '20px', color: '#4a5568' }} />
+                <Icon icon="mdi:content-copy" style={{ fontSize: '18px', color: '#4a5568' }} />
               </button>
             </div>
           </div>
@@ -476,30 +481,25 @@ const SchoolQRPage = () => {
           {/* Footer */}
           <div className="footer-section" style={{
             textAlign: 'center',
-            paddingTop: '20px',
+            paddingTop: '15px',
             borderTop: '1px solid #e2e8f0'
           }}>
             <div style={{
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '8px',
-              marginBottom: '8px'
+              gap: '6px'
             }}>
-              <Icon icon="mdi:car-multiple" style={{ fontSize: '24px', color: '#667eea' }} />
+              <Icon icon="mdi:bus-school" style={{ fontSize: '20px', color: '#667eea' }} />
               <span style={{
                 fontWeight: '600',
                 color: '#667eea',
-                fontSize: '18px'
+                fontSize: '16px'
               }}>RideWatch</span>
+              <span style={{ color: '#a0aec0', fontSize: '12px', marginLeft: '5px' }}>
+                — School Transportation Management
+              </span>
             </div>
-            <p style={{
-              color: '#718096',
-              fontSize: '13px',
-              margin: 0
-            }}>
-              School Transportation Management System
-            </p>
           </div>
         </div>
       </div>
@@ -510,14 +510,10 @@ const SchoolQRPage = () => {
           margin: 0 !important;
           padding: 0 !important;
         }
-        /* Hide print icon on screen */
-        .school-icon-print {
-          display: none;
-        }
         @media print {
           @page {
             size: A4 portrait;
-            margin: 0.4in;
+            margin: 0.5in;
           }
           html, body {
             background: white !important;
@@ -531,6 +527,14 @@ const SchoolQRPage = () => {
           /* Hide action buttons */
           .action-buttons {
             display: none !important;
+          }
+          /* Hide the screen icon (gradient won't print) */
+          .school-icon-screen {
+            display: none !important;
+          }
+          /* Show the print icon (uses border which DOES print) */
+          .school-icon-print {
+            display: flex !important;
           }
           /* Style the main container for print */
           .qr-page-container {
@@ -546,65 +550,84 @@ const SchoolQRPage = () => {
             max-width: 100% !important;
             margin: 0 !important;
           }
-          /* Style the card for print - clean border, no shadow, compact */
+          /* Style the card for print - clean border, no shadow */
           .qr-card {
             box-shadow: none !important;
-            border: 2px solid #667eea !important;
+            border: 2px solid #333 !important;
             border-radius: 12px !important;
-            padding: 20px 15px !important;
+            padding: 30px 25px !important;
             page-break-inside: avoid !important;
           }
-          /* Hide screen icon, show print icon */
-          .school-icon-screen {
-            display: none !important;
-          }
-          .school-icon-print {
-            display: flex !important;
-          }
-          /* Compact header section */
+          /* Header section */
           .header-section {
-            margin-bottom: 15px !important;
+            margin-bottom: 20px !important;
           }
-          /* Compact spacing for print */
+          /* Title sizing for print */
           .qr-card h1 {
-            font-size: 22px !important;
-            margin-bottom: 5px !important;
+            font-size: 26px !important;
+            margin-bottom: 8px !important;
+            margin-top: 0 !important;
           }
           .qr-card p {
             font-size: 13px !important;
             margin-bottom: 8px !important;
+            margin-top: 0 !important;
           }
-          /* Smaller QR code for print to fit on one page */
+          /* QR section */
+          .qr-section {
+            margin-bottom: 20px !important;
+          }
+          /* QR code size for print */
           #school-qr-code {
             width: 180px !important;
             height: 180px !important;
           }
-          /* Reduce QR container padding */
+          /* QR container */
           .qr-code-container {
-            padding: 15px !important;
-            margin-bottom: 10px !important;
+            padding: 12px !important;
+            margin-bottom: 8px !important;
+            box-shadow: none !important;
+            border: 1px solid #ccc !important;
+          }
+          /* QR instruction */
+          .qr-instruction {
+            font-size: 12px !important;
+            margin-top: 8px !important;
           }
           /* Hide copy button in print */
           button[title="Copy School ID"] {
             display: none !important;
           }
-          /* Make school ID section compact */
+          /* School ID section */
           .school-id-section {
-            margin-bottom: 15px !important;
+            margin-bottom: 20px !important;
+          }
+          .school-id-section label {
+            font-size: 13px !important;
+            margin-bottom: 6px !important;
           }
           .qr-card input[readonly] {
-            padding: 8px !important;
-            font-size: 11px !important;
+            padding: 10px !important;
+            font-size: 12px !important;
+            border-radius: 6px !important;
           }
-          /* Compact footer */
+          /* Footer */
           .footer-section {
-            padding-top: 10px !important;
-            margin-top: 10px !important;
+            padding-top: 15px !important;
+            margin-top: 0 !important;
+            border-top: 1px solid #ccc !important;
           }
-          /* Description box compact */
+          .footer-section span {
+            font-size: 14px !important;
+          }
+          /* Description box */
           .description-box {
-            padding: 12px !important;
-            margin-bottom: 15px !important;
+            padding: 12px 15px !important;
+            margin-bottom: 20px !important;
+          }
+          .description-box p {
+            font-size: 12px !important;
+            line-height: 1.5 !important;
           }
         }
       `}</style>
