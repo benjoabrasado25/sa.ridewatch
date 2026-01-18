@@ -209,7 +209,7 @@ const SchoolsManagementLayer = () => {
     if (!selectedSchool) return;
 
     const ok = window.confirm(
-      `Unban "${userName || 'this user'}" from ${selectedSchool.name}? They will be able to rejoin and see routes again.`
+      `Unban "${userName || 'this user'}" from ${selectedSchool.name}? They will be restored to active users.`
     );
     if (!ok) return;
 
@@ -220,7 +220,16 @@ const SchoolsManagementLayer = () => {
         updatedAt: serverTimestamp(),
       });
 
-      window.alert(`User has been unbanned from ${selectedSchool.name}. They can now rejoin.`);
+      // Re-add this school to user's school_ids so they're active again
+      await updateDoc(doc(db, "users", userId), {
+        school_ids: arrayUnion(selectedSchool.id),
+        updatedAt: serverTimestamp(),
+      });
+
+      // Update local state - remove from banned, will appear in active via onSnapshot
+      setBannedUsers((prev) => prev.filter((u) => u.id !== userId));
+
+      window.alert(`User has been unbanned and restored to ${selectedSchool.name}.`);
     } catch (e) {
       window.alert(e?.message || "Failed to unban user.");
     }
