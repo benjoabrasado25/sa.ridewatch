@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, addDoc, serverTimestamp, doc, setDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
@@ -8,13 +8,21 @@ const CreateCompanyLayer = () => {
   const { user, loading, refreshProfile } = useAuth();
   const navigate = useNavigate();
 
-  const [name, setName] = useState("");
+  const [name, setName] = useState("My Bus Company");
   const [address, setAddress] = useState("");
-  const [description, setDescription] = useState("");
+  const [description, setDescription] = useState("School bus transportation services");
   const [contactPerson, setContactPerson] = useState("");
   const [contactPhone, setContactPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+
+  // Update preset values when user loads
+  useEffect(() => {
+    if (user?.displayName) {
+      setName(`${user.displayName}'s Bus Company`);
+      setContactPerson(user.displayName);
+    }
+  }, [user]);
 
   const handleCreate = async (e) => {
     e.preventDefault();

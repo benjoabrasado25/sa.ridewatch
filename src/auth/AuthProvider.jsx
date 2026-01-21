@@ -11,7 +11,7 @@ import {
 // ⬇⬇⬇ use RELATIVE import ⬇⬇⬇
 import { auth, db, ensureAuthPersistence } from "../lib/firebase";
 
-import { doc, getDoc, serverTimestamp, setDoc } from "firebase/firestore";
+import { doc, getDoc, serverTimestamp, setDoc, collection, addDoc } from "firebase/firestore";
 
 const AuthCtx = createContext(null);
 
@@ -28,18 +28,58 @@ export function AuthProvider({ children }) {
     const ref = doc(db, "users", u.uid);
     const snap = await getDoc(ref);
     if (!snap.exists()) {
-        await setDoc(ref, {
+      // New user - create user doc and auto-create company
+      const companyName = u.displayName ? `${u.displayName}'s Bus Company` : "My Bus Company";
+
+      // 1) Create company
+      const companyRef = await addDoc(collection(db, "companies"), {
+        name: companyName,
+        address: "",
+        description: "School bus transportation services",
+        contact_person: u.displayName || "",
+        contact_phone: "",
+        owner_uid: u.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        status: "active",
+      });
+
+      // 2) Create user doc with company_id
+      await setDoc(ref, {
         uid: u.uid,
         email: u.email,
         displayName: u.displayName,
         photoURL: u.photoURL || "",
-        account_type: "bus_company", // Default: bus company user
+        account_type: "bus_company",
+        company_id: companyRef.id, // Auto-assign company
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        });
-        setProfile((await getDoc(ref)).data());
+      });
+      setProfile((await getDoc(ref)).data());
     } else {
-      setProfile(snap.data());
+      // Existing user - check if they need a company
+      const profileData = snap.data();
+      if (!profileData.company_id) {
+        // User exists but has no company - create one
+        const companyName = u.displayName ? `${u.displayName}'s Bus Company` : "My Bus Company";
+
+        const companyRef = await addDoc(collection(db, "companies"), {
+          name: companyName,
+          address: "",
+          description: "School bus transportation services",
+          contact_person: u.displayName || "",
+          contact_phone: "",
+          owner_uid: u.uid,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          status: "active",
+        });
+
+        await setDoc(ref, { company_id: companyRef.id, updatedAt: serverTimestamp() }, { merge: true });
+        setProfile((await getDoc(ref)).data());
+      } else {
+        setProfile(profileData);
+      }
     }
   }
 
