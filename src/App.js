@@ -1,5 +1,5 @@
 // App.jsx
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
 import RouteScrollToTop from "./helper/RouteScrollToTop";
 
 // === Auth wrappers ===
@@ -10,7 +10,6 @@ import { ToastProvider } from "./components/Toast.jsx";
 
 // === Pages ===
 import HomePageOne from "./pages/HomePageOne";
-import CreateCompanyPage from "./pages/CreateCompanyPage";
 import InviteDriverPage from "./pages/InviteDriverPage";
 import ErrorPage from "./pages/ErrorPage";
 import SignInPage from "./pages/SignInPage";
@@ -59,15 +58,8 @@ function App() {
           <Route path="/routes" element={secure(<DriverRoutesPage />)} />
 
 
-          {/* Create Company: must be logged in, company not required */}
-          <Route
-            path="/create-company"
-            element={
-              <RequireAuth>
-                <CreateCompanyPage />
-              </RequireAuth>
-            }
-          />
+          {/* Create Company route - redirect to home since companies are auto-created */}
+          <Route path="/create-company" element={<Navigate to="/" replace />} />
 
           {/* 404 */}
           <Route path="*" element={<ErrorPage />} />
