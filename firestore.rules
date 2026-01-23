@@ -52,25 +52,15 @@ service cloud.firestore {
       // A user can always read & write their own document
       allow read, create, update, delete: if signedIn() && request.auth.uid == uid;
 
-      // Company owner can read all driver documents (filtering happens on frontend)
-      // This is needed because drivers can belong to multiple schools
-      allow read: if signedIn()
-        && hasCompany()
-        && resource.data.account_type == 'driver';
+      // Company owner can read any user document (needed for invite validation, driver management, user banning)
+      allow read: if signedIn() && hasCompany();
 
       // Company owner can update drivers if they share at least one school
       allow update: if signedIn()
         && hasCompany()
         && resource.data.account_type == 'driver';
 
-      // Company owner can read users who are in their company's schools
-      // (needed for user management / ban feature)
-      allow read: if signedIn()
-        && hasCompany()
-        && resource.data.account_type == 'user';
-
       // Company owner can update users to remove school_ids when banning
-      // (only allows updating school_ids field for users)
       allow update: if signedIn()
         && hasCompany()
         && resource.data.account_type == 'user';
