@@ -4,10 +4,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
 import { auth, db } from "../lib/firebase"; // <-- bring in auth to signOut()
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { useToast } from "./Toast";
 
 const SignUpLayer = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
@@ -33,8 +35,8 @@ const SignUpLayer = () => {
     // Important: sign out so the next screen truly requires a fresh password login
     try { await auth.signOut(); } catch (_) {}
 
-    // popup then redirect
-    window.alert("User has been registered successfully");
+    // toast then redirect
+    toast.success("User has been registered successfully");
     navigate("/sign-in", { replace: true });
   }
 

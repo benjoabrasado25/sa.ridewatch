@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Icon } from "@iconify/react";
 import { useAuth } from "../auth/AuthProvider";
 import { db } from "../lib/firebase";
+import { useToast } from "./Toast";
 import SchoolSelector from "./SchoolSelector";
 import {
   addDoc,
@@ -39,12 +40,16 @@ function Modal({ open, title, children, onClose }) {
 
 const DriverRoutesLayer = () => {
   const { user, profile, loading } = useAuth();
+  const toast = useToast();
   const schoolId = profile?.current_school_id || null;
 
   const canUse = useMemo(() => !!user && !!schoolId, [user, schoolId]);
 
   const [routes, setRoutes] = useState(null); // null = loading; [] = empty
   const [err, setErr] = useState("");
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: "", message: "", onConfirm: null });
 
   // modal state
   const [showAdd, setShowAdd] = useState(false);
@@ -127,15 +132,21 @@ const DriverRoutesLayer = () => {
 
   async function deleteRoute(id) {
     if (!canUse || !id) return;
-    const ok = window.confirm(
-      "Delete this route? This cannot be undone. (active_drivers subcollection, if any, must be handled in your rules/cleanup)"
-    );
-    if (!ok) return;
-    try {
-      await deleteDoc(doc(db, "schools", schoolId, "routes", id));
-    } catch (e) {
-      setErr(e?.message || "Failed to delete route.");
-    }
+
+    setConfirmModal({
+      open: true,
+      title: "Delete Route",
+      message: "Delete this route? This cannot be undone.",
+      onConfirm: async () => {
+        setConfirmModal({ open: false, title: "", message: "", onConfirm: null });
+        try {
+          await deleteDoc(doc(db, "schools", schoolId, "routes", id));
+          toast.success("Route deleted successfully.");
+        } catch (e) {
+          toast.error(e?.message || "Failed to delete route.");
+        }
+      },
+    });
   }
 
   if (loading) return null;
@@ -304,6 +315,31 @@ const DriverRoutesLayer = () => {
             </button>
           </div>
         </form>
+      </Modal>
+
+      {/* Confirmation Modal */}
+      <Modal
+        open={confirmModal.open}
+        title={confirmModal.title}
+        onClose={() => setConfirmModal({ open: false, title: "", message: "", onConfirm: null })}
+      >
+        <p className="mb-4">{confirmModal.message}</p>
+        <div className="d-flex gap-2 justify-content-end">
+          <button
+            type="button"
+            className="btn btn-outline-secondary"
+            onClick={() => setConfirmModal({ open: false, title: "", message: "", onConfirm: null })}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-danger"
+            onClick={confirmModal.onConfirm}
+          >
+            Confirm
+          </button>
+        </div>
       </Modal>
     </section>
   );

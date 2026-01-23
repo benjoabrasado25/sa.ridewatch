@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { collection, addDoc, serverTimestamp, doc, setDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../auth/AuthProvider";
+import { useToast } from "./Toast";
 
 const CreateCompanyLayer = () => {
   const { user, loading, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [name, setName] = useState("My Bus Company");
   const [address, setAddress] = useState("");
@@ -66,8 +68,8 @@ const CreateCompanyLayer = () => {
       // 3) Refresh profile to get updated company_id
       await refreshProfile();
 
-      // 4) Alert + go to schools page
-      window.alert("Bus company has been created successfully.");
+      // 4) Toast + go to schools page
+      toast.success("Bus company has been created successfully.");
       navigate("/schools", { replace: true });
     } catch (err) {
       setError(err?.message || "Failed to create company.");

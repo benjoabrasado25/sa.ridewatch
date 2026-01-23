@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { useAuth } from "../auth/AuthProvider";
 import { db } from "../lib/firebase";
+import { useToast } from "./Toast";
 import { collection, query, where, onSnapshot, doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 const SchoolSelector = () => {
   const { user, profile, refreshProfile } = useAuth();
+  const toast = useToast();
   const companyId = profile?.company_id || null;
   const currentSchoolId = profile?.current_school_id || null;
 
@@ -53,9 +55,10 @@ const SchoolSelector = () => {
         { merge: true }
       );
       await refreshProfile();
+      toast.success("School changed successfully.");
     } catch (err) {
       console.error("Failed to change school:", err);
-      alert("Failed to change school. Please try again.");
+      toast.error("Failed to change school. Please try again.");
     } finally {
       setChanging(false);
     }

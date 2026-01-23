@@ -2,6 +2,7 @@ import { Icon } from "@iconify/react";
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { db } from "../lib/firebase";
+import { useToast } from "./Toast";
 import SchoolSelector from "./SchoolSelector";
 import {
   collection,
@@ -48,9 +49,13 @@ function createToken(bytes = 24) {
 
 const InviteDriverLayer = () => {
   const { user, profile, loading } = useAuth();
+  const toast = useToast();
   const schoolId = profile?.current_school_id || null;
 
   const canInvite = useMemo(() => !!user && !!schoolId, [user, schoolId]);
+
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: "", message: "", onConfirm: null });
 
   // Invite modal state
   const [showInvite, setShowInvite] = useState(false);
@@ -139,7 +144,7 @@ const InviteDriverLayer = () => {
       const driverDoc = doc(db, "users", driverId);
       const driverSnap = await getDoc(driverDoc);
       if (!driverSnap.exists()) {
-        window.alert("Driver not found");
+        toast.error("Driver not found");
         return;
       }
 
@@ -147,7 +152,7 @@ const InviteDriverLayer = () => {
       const currentSchools = driverData.school_ids || [];
 
       if (currentSchools.includes(schoolId)) {
-        window.alert("Driver already assigned to this school");
+        toast.warning("Driver already assigned to this school");
         return;
       }
 
@@ -157,10 +162,10 @@ const InviteDriverLayer = () => {
         updatedAt: serverTimestamp(),
       });
 
-      window.alert("Driver assigned to this school successfully!");
+      toast.success("Driver assigned to this school successfully!");
       closeAssign();
     } catch (err) {
-      window.alert(err?.message || "Failed to assign driver");
+      toast.error(err?.message || "Failed to assign driver");
     }
   }
 
@@ -257,7 +262,7 @@ const InviteDriverLayer = () => {
   function copyInviteLink() {
     if (!inviteLink) return;
     navigator.clipboard.writeText(inviteLink).then(() => {
-      window.alert("Invite link copied to clipboard.");
+      toast.success("Invite link copied to clipboard.");
     });
   }
 
@@ -271,29 +276,34 @@ const InviteDriverLayer = () => {
         status: next,
         updatedAt: serverTimestamp(),
       });
+      toast.success(`Driver ${next === "active" ? "activated" : "deactivated"} successfully.`);
     } catch (e) {
-      window.alert(e?.message || "Failed to update driver status.");
+      toast.error(e?.message || "Failed to update driver status.");
     }
   }
 
   async function removeDriverFromSchool(driver) {
-    if (!window.confirm(`Remove ${driver.displayName || driver.email} from this school?`)) {
-      return;
-    }
+    setConfirmModal({
+      open: true,
+      title: "Remove Driver",
+      message: `Remove ${driver.displayName || driver.email} from this school?`,
+      onConfirm: async () => {
+        setConfirmModal({ open: false, title: "", message: "", onConfirm: null });
+        try {
+          const currentSchools = driver.school_ids || [];
+          const updatedSchools = currentSchools.filter(id => id !== schoolId);
 
-    try {
-      const currentSchools = driver.school_ids || [];
-      const updatedSchools = currentSchools.filter(id => id !== schoolId);
+          await updateDoc(doc(db, "users", driver.id), {
+            school_ids: updatedSchools,
+            updatedAt: serverTimestamp(),
+          });
 
-      await updateDoc(doc(db, "users", driver.id), {
-        school_ids: updatedSchools,
-        updatedAt: serverTimestamp(),
-      });
-
-      window.alert("Driver removed from this school.");
-    } catch (e) {
-      window.alert(e?.message || "Failed to remove driver from school.");
-    }
+          toast.success("Driver removed from this school.");
+        } catch (e) {
+          toast.error(e?.message || "Failed to remove driver from school.");
+        }
+      },
+    });
   }
 
   if (loading) return null;
@@ -556,6 +566,31 @@ const InviteDriverLayer = () => {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* Confirmation Modal */}
+      <Modal
+        open={confirmModal.open}
+        title={confirmModal.title}
+        onClose={() => setConfirmModal({ open: false, title: "", message: "", onConfirm: null })}
+      >
+        <p className="mb-4">{confirmModal.message}</p>
+        <div className="d-flex gap-2 justify-content-end">
+          <button
+            type="button"
+            className="btn btn-outline-secondary"
+            onClick={() => setConfirmModal({ open: false, title: "", message: "", onConfirm: null })}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-danger"
+            onClick={confirmModal.onConfirm}
+          >
+            Confirm
+          </button>
+        </div>
       </Modal>
     </section>
   );

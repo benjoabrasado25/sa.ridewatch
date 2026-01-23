@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { useAuth } from "../auth/AuthProvider";
 import { db } from "../lib/firebase";
+import { useToast } from "./Toast";
 import {
   collection,
   query,
@@ -43,6 +44,7 @@ function Modal({ open, title, children, onClose, size = "md" }) {
 
 const SchoolsManagementLayer = () => {
   const { user, profile, refreshProfile } = useAuth();
+  const toast = useToast();
   const companyId = profile?.company_id || null;
   const currentSchoolId = profile?.current_school_id || null;
 
@@ -176,67 +178,76 @@ const SchoolsManagementLayer = () => {
     setLoadingBanned(false);
   }
 
+  // Confirmation modal state
+  const [confirmModal, setConfirmModal] = useState({ open: false, title: "", message: "", onConfirm: null });
+
   // Ban user from school
   async function banUserFromSchool(userId, userName) {
     if (!selectedSchool) return;
 
-    const ok = window.confirm(
-      `Ban "${userName || 'this user'}" from ${selectedSchool.name}? They will no longer be able to see routes from this school.`
-    );
-    if (!ok) return;
+    setConfirmModal({
+      open: true,
+      title: "Ban User",
+      message: `Ban "${userName || 'this user'}" from ${selectedSchool.name}? They will no longer be able to see routes from this school.`,
+      onConfirm: async () => {
+        setConfirmModal({ open: false, title: "", message: "", onConfirm: null });
+        try {
+          // Add user to banned_users array in school document
+          await updateDoc(doc(db, "schools", selectedSchool.id), {
+            banned_users: arrayUnion(userId),
+            updatedAt: serverTimestamp(),
+          });
 
-    try {
-      // Add user to banned_users array in school document
-      await updateDoc(doc(db, "schools", selectedSchool.id), {
-        banned_users: arrayUnion(userId),
-        updatedAt: serverTimestamp(),
-      });
+          // Remove this school from user's school_ids
+          await updateDoc(doc(db, "users", userId), {
+            school_ids: arrayRemove(selectedSchool.id),
+            updatedAt: serverTimestamp(),
+          });
 
-      // Remove this school from user's school_ids
-      await updateDoc(doc(db, "users", userId), {
-        school_ids: arrayRemove(selectedSchool.id),
-        updatedAt: serverTimestamp(),
-      });
-
-      window.alert(`User has been banned from ${selectedSchool.name}.`);
-    } catch (e) {
-      window.alert(e?.message || "Failed to ban user.");
-    }
+          toast.success(`User has been banned from ${selectedSchool.name}.`);
+        } catch (e) {
+          toast.error(e?.message || "Failed to ban user.");
+        }
+      },
+    });
   }
 
   // Unban user from school
   async function unbanUserFromSchool(userId, userName) {
     if (!selectedSchool) return;
 
-    const ok = window.confirm(
-      `Unban "${userName || 'this user'}" from ${selectedSchool.name}? They will be restored to active users.`
-    );
-    if (!ok) return;
+    setConfirmModal({
+      open: true,
+      title: "Unban User",
+      message: `Unban "${userName || 'this user'}" from ${selectedSchool.name}? They will be restored to active users.`,
+      onConfirm: async () => {
+        setConfirmModal({ open: false, title: "", message: "", onConfirm: null });
+        try {
+          // Remove user from banned_users array in school document
+          await updateDoc(doc(db, "schools", selectedSchool.id), {
+            banned_users: arrayRemove(userId),
+            updatedAt: serverTimestamp(),
+          });
 
-    try {
-      // Remove user from banned_users array in school document
-      await updateDoc(doc(db, "schools", selectedSchool.id), {
-        banned_users: arrayRemove(userId),
-        updatedAt: serverTimestamp(),
-      });
+          // Re-add this school to user's school_ids so they're active again
+          await updateDoc(doc(db, "users", userId), {
+            school_ids: arrayUnion(selectedSchool.id),
+            updatedAt: serverTimestamp(),
+          });
 
-      // Re-add this school to user's school_ids so they're active again
-      await updateDoc(doc(db, "users", userId), {
-        school_ids: arrayUnion(selectedSchool.id),
-        updatedAt: serverTimestamp(),
-      });
+          // Find the user in bannedUsers and move them to schoolUsers
+          const unbannedUser = bannedUsers.find((u) => u.id === userId);
+          if (unbannedUser) {
+            setSchoolUsers((prev) => [...prev, unbannedUser]);
+          }
+          setBannedUsers((prev) => prev.filter((u) => u.id !== userId));
 
-      // Find the user in bannedUsers and move them to schoolUsers
-      const unbannedUser = bannedUsers.find((u) => u.id === userId);
-      if (unbannedUser) {
-        setSchoolUsers((prev) => [...prev, unbannedUser]);
-      }
-      setBannedUsers((prev) => prev.filter((u) => u.id !== userId));
-
-      window.alert(`User has been unbanned and restored to ${selectedSchool.name}.`);
-    } catch (e) {
-      window.alert(e?.message || "Failed to unban user.");
-    }
+          toast.success(`User has been unbanned and restored to ${selectedSchool.name}.`);
+        } catch (e) {
+          toast.error(e?.message || "Failed to unban user.");
+        }
+      },
+    });
   }
 
   // Close Modals
@@ -361,33 +372,38 @@ const SchoolsManagementLayer = () => {
   // Delete School
   async function deleteSchool(school) {
     if (!user || !school) return;
-    const ok = window.confirm(
-      `Delete "${school.name}"? This will also delete all routes and data associated with this school. This cannot be undone.`
-    );
-    if (!ok) return;
 
-    try {
-      await deleteDoc(doc(db, "schools", school.id));
+    setConfirmModal({
+      open: true,
+      title: "Delete School",
+      message: `Delete "${school.name}"? This will also delete all routes and data associated with this school. This cannot be undone.`,
+      onConfirm: async () => {
+        setConfirmModal({ open: false, title: "", message: "", onConfirm: null });
+        try {
+          await deleteDoc(doc(db, "schools", school.id));
 
-      // If deleting current school, clear it
-      if (currentSchoolId === school.id) {
-        const remaining = schools?.filter((s) => s.id !== school.id) || [];
-        const newCurrent = remaining.length > 0 ? remaining[0].id : null;
-        await setDoc(
-          doc(db, "users", user.uid),
-          { current_school_id: newCurrent, updatedAt: serverTimestamp() },
-          { merge: true }
-        );
-      }
-    } catch (e) {
-      setErr(e?.message || "Failed to delete school.");
-    }
+          // If deleting current school, clear it
+          if (currentSchoolId === school.id) {
+            const remaining = schools?.filter((s) => s.id !== school.id) || [];
+            const newCurrent = remaining.length > 0 ? remaining[0].id : null;
+            await setDoc(
+              doc(db, "users", user.uid),
+              { current_school_id: newCurrent, updatedAt: serverTimestamp() },
+              { merge: true }
+            );
+          }
+          toast.success(`School "${school.name}" has been deleted.`);
+        } catch (e) {
+          toast.error(e?.message || "Failed to delete school.");
+        }
+      },
+    });
   }
 
   // Copy School ID
   function copySchoolId(schoolId) {
     navigator.clipboard.writeText(schoolId).then(() => {
-      window.alert("School ID copied to clipboard.");
+      toast.success("School ID copied to clipboard.");
     });
   }
 
@@ -814,6 +830,31 @@ const SchoolsManagementLayer = () => {
             )}
           </div>
         )}
+      </Modal>
+
+      {/* Confirmation Modal */}
+      <Modal
+        open={confirmModal.open}
+        title={confirmModal.title}
+        onClose={() => setConfirmModal({ open: false, title: "", message: "", onConfirm: null })}
+      >
+        <p className="mb-4">{confirmModal.message}</p>
+        <div className="d-flex gap-2 justify-content-end">
+          <button
+            type="button"
+            className="btn btn-outline-secondary"
+            onClick={() => setConfirmModal({ open: false, title: "", message: "", onConfirm: null })}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className="btn btn-danger"
+            onClick={confirmModal.onConfirm}
+          >
+            Confirm
+          </button>
+        </div>
       </Modal>
     </section>
   );

@@ -4,9 +4,11 @@ import { Icon } from '@iconify/react';
 import { QRCodeCanvas } from 'qrcode.react';
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { useToast } from '../components/Toast';
 
 const SchoolQRPage = () => {
   const { schoolId } = useParams();
+  const toast = useToast();
   const [school, setSchool] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -48,7 +50,7 @@ const SchoolQRPage = () => {
 
   const copySchoolId = () => {
     navigator.clipboard.writeText(schoolId).then(() => {
-      alert('School ID copied to clipboard!');
+      toast.success('School ID copied to clipboard!');
     });
   };
 

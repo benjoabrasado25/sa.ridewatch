@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { collection, addDoc, serverTimestamp, doc, setDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useAuth } from "../auth/AuthProvider";
+import { useToast } from "./Toast";
 
 const CreateSchoolLayer = () => {
   const { user, loading, refreshProfile } = useAuth();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [name, setName] = useState("");
   const [address, setAddress] = useState("");
@@ -50,8 +52,8 @@ const CreateSchoolLayer = () => {
       // 3) Refresh the profile to get the updated current_school_id
       await refreshProfile();
 
-      // 4) Alert + go to schools page
-      window.alert("School has been created successfully.");
+      // 4) Toast + go to schools page
+      toast.success("School has been created successfully.");
       navigate("/schools", { replace: true });
     } catch (err) {
       setError(err?.message || "Failed to create school.");

@@ -6,6 +6,7 @@ import RouteScrollToTop from "./helper/RouteScrollToTop";
 import { AuthProvider } from "./auth/AuthProvider.jsx";
 import RequireAuth from "./auth/RequireAuth.jsx";
 import RequireSchool from "./auth/RequireSchool.jsx";
+import { ToastProvider } from "./components/Toast.jsx";
 
 // === Pages ===
 import HomePageOne from "./pages/HomePageOne";
@@ -38,6 +39,7 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
+        <ToastProvider>
         <RouteScrollToTop />
         <Routes>
           {/* ===== PUBLIC (ONLY auth pages) ===== */}
@@ -70,6 +72,7 @@ function App() {
           {/* 404 */}
           <Route path="*" element={<ErrorPage />} />
         </Routes>
+        </ToastProvider>
       </AuthProvider>
     </BrowserRouter>
   );

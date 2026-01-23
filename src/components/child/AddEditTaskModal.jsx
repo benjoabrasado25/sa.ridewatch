@@ -1,6 +1,6 @@
 // src/components/AddEditTaskModal.js
 import React, { useState, useEffect } from 'react';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { Modal, Button, Form, Alert } from 'react-bootstrap';
 
 const AddEditTaskModal = ({ show, handleClose, handleSave, task }) => {
     const isEdit = Boolean(task);
@@ -9,6 +9,7 @@ const AddEditTaskModal = ({ show, handleClose, handleSave, task }) => {
     const [date, setDate] = useState('');
     const [description, setDescription] = useState('');
     const [imagePreview, setImagePreview] = useState('');
+    const [validationError, setValidationError] = useState('');
 
     useEffect(() => {
         if (isEdit && task) {
@@ -24,6 +25,7 @@ const AddEditTaskModal = ({ show, handleClose, handleSave, task }) => {
             setDescription('');
             setImagePreview('');
         }
+        setValidationError('');
     }, [isEdit, task]);
 
     const handleImageChange = (e) => {
@@ -40,8 +42,9 @@ const AddEditTaskModal = ({ show, handleClose, handleSave, task }) => {
     };
 
     const onSave = () => {
+        setValidationError('');
         if (!title || !description || !tag || !date) {
-            alert('Please fill in all required fields.');
+            setValidationError('Please fill in all required fields.');
             return;
         }
 
@@ -60,7 +63,7 @@ const AddEditTaskModal = ({ show, handleClose, handleSave, task }) => {
         setDate('');
         setDescription('');
         setImagePreview('');
-
+        setValidationError('');
     };
 
     return (
@@ -69,6 +72,11 @@ const AddEditTaskModal = ({ show, handleClose, handleSave, task }) => {
                 <Modal.Title>{isEdit ? 'Edit Task' : 'Add New Task'}</Modal.Title>
             </Modal.Header>
             <Modal.Body>
+                {validationError && (
+                    <Alert variant="danger" onClose={() => setValidationError('')} dismissible>
+                        {validationError}
+                    </Alert>
+                )}
                 <Form>
                     {/* Title */}
                     <Form.Group className="mb-3" controlId="taskTitle">

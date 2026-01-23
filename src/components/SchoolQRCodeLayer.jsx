@@ -1,9 +1,11 @@
 import React from "react";
 import { useParams } from "react-router-dom";
 import { QRCodeCanvas } from "qrcode.react";
+import { useToast } from "./Toast";
 
 const SchoolQRCodeLayer = () => {
   const { schoolId } = useParams();
+  const toast = useToast();
 
   if (!schoolId) {
     return (
@@ -20,7 +22,7 @@ const SchoolQRCodeLayer = () => {
 
   function copyId() {
     navigator.clipboard.writeText(schoolId).then(() => {
-      window.alert("School ID copied to clipboard.");
+      toast.success("School ID copied to clipboard.");
     });
   }
 
