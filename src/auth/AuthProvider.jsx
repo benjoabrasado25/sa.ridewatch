@@ -114,7 +114,40 @@ export function AuthProvider({ children }) {
     register: async ({ email, password, displayName }) => {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
       if (displayName) await updateProfile(cred.user, { displayName });
-      await ensureUserDoc(cred.user);
+
+      // Create user doc and company, then update profile state
+      const userRef = doc(db, "users", cred.user.uid);
+      const companyName = displayName ? `${displayName}'s Bus Company` : "My Bus Company";
+
+      // Create company
+      const companyRef = await addDoc(collection(db, "companies"), {
+        name: companyName,
+        address: "",
+        description: "School bus transportation services",
+        contact_person: displayName || "",
+        contact_phone: "",
+        owner_uid: cred.user.uid,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        status: "active",
+      });
+
+      // Create user doc with company_id
+      await setDoc(userRef, {
+        uid: cred.user.uid,
+        email: cred.user.email,
+        displayName: displayName || "",
+        photoURL: cred.user.photoURL || "",
+        account_type: "bus_company",
+        company_id: companyRef.id,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      // Update profile state immediately
+      const newProfile = (await getDoc(userRef)).data();
+      setProfile(newProfile);
+
       return cred.user;
     },
     logout: () => signOut(auth),
