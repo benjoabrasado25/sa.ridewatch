@@ -219,16 +219,22 @@ const InviteDriverLayer = () => {
     try {
       setBusyInvite(true);
 
-      // Check if email is already registered as a driver
+      // Check if email is already registered (any account type)
       const existingQuery = query(
         collection(db, "users"),
-        where("email", "==", email),
-        where("account_type", "==", "driver")
+        where("email", "==", email)
       );
       const existingSnap = await getDocs(existingQuery);
 
       if (!existingSnap.empty) {
-        setInviteError("This email is already registered as a driver. Use 'Assign Existing Driver' instead.");
+        const existingUser = existingSnap.docs[0].data();
+        const accountType = existingUser.account_type || "user";
+
+        if (accountType === "driver") {
+          setInviteError("This email is already registered as a driver. Use 'Assign Existing Driver' instead.");
+        } else {
+          setInviteError(`This email is already registered as a ${accountType.replace("_", " ")}. Cannot invite as driver.`);
+        }
         setBusyInvite(false);
         return;
       }
