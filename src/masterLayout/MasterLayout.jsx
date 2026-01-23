@@ -10,8 +10,8 @@ const MasterLayout = ({ children }) => {
   let [sidebarActive, seSidebarActive] = useState(false);
   let [mobileMenu, setMobileMenu] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();                  // ⬅ add
-  const { logout } = useAuth();                    // ⬅ add  
+  const navigate = useNavigate();
+  const { logout, user, profile } = useAuth();  
 
   useEffect(() => {
     const handleDropdownClick = (event) => {
@@ -233,10 +233,10 @@ const MasterLayout = ({ children }) => {
                     <div className='py-12 px-16 radius-8 bg-primary-50 mb-16 d-flex align-items-center justify-content-between gap-2'>
                       <div>
                         <h6 className='text-lg text-primary-light fw-semibold mb-2'>
-                          Bus Company
+                          {user?.displayName || profile?.displayName || 'User'}
                         </h6>
                         <span className='text-secondary-light fw-medium text-sm'>
-                          Admin
+                          {user?.email || ''}
                         </span>
                       </div>
                       <button type='button' className='hover-text-danger'>
