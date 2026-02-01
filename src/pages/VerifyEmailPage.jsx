@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { db } from '../lib/firebase';
-import { doc, getDoc, updateDoc, serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, query, collection, where, getDocs } from 'firebase/firestore';
 import { useToast } from '../components/Toast';
 
 const VerifyEmailPage = () => {
