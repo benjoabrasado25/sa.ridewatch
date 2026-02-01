@@ -22,21 +22,9 @@ const SignUpLayer = () => {
   }
 
   async function afterSignUp(user) {
-    // ensure account_type is stored
-    await setDoc(
-      doc(db, "users", user.uid),
-      {
-        account_type: "school_admin",
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-
-    // Important: sign out so the next screen truly requires a fresh password login
-    try { await auth.signOut(); } catch (_) {}
-
-    // toast then redirect
-    toast.success("User has been registered successfully");
+    // Note: User is already signed out by register() function
+    // Show success message with email verification instructions
+    toast.success("Registration successful! Please check your email to verify your account before signing in.");
     navigate("/sign-in", { replace: true });
   }
 
