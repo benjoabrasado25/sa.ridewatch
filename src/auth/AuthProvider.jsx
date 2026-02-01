@@ -195,8 +195,10 @@ export function AuthProvider({ children }) {
         updatedAt: serverTimestamp(),
       });
 
-      // Send verification email
-      await sendVerificationEmail(cred.user.email, displayName || cred.user.email, verificationToken);
+      // Send verification email (don't await - let it happen in background)
+      // If it fails, user still gets signed out and must contact support
+      sendVerificationEmail(cred.user.email, displayName || cred.user.email, verificationToken)
+        .catch(err => console.error('Failed to send verification email:', err));
 
       // Sign out immediately - user must verify email before accessing the app
       await signOut(auth);
