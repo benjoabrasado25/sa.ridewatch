@@ -5,7 +5,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { useToast } from "./Toast";
 
 const SignUpLayer = () => {
-  const { register } = useAuth();
+  const { register, completeRegistration } = useAuth();
   const navigate = useNavigate();
   const toast = useToast();
 
@@ -15,15 +15,13 @@ const SignUpLayer = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  // Verification code state
+  const [verificationStep, setVerificationStep] = useState(false);
+  const [verificationId, setVerificationId] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+
   function hasEdgeSpaces(str) {
     return str.length !== str.trim().length; // leading/trailing spaces present
-  }
-
-  async function afterSignUp(user) {
-    // Note: User is already signed out by register() function
-    // Show success message with email verification instructions
-    toast.success("Registration successful! Please check your email to verify your account before signing in.");
-    navigate("/sign-in", { replace: true });
   }
 
   const handleSubmit = async (e) => {
@@ -43,15 +41,38 @@ const SignUpLayer = () => {
         throw new Error("Password must be at least 8 characters.");
       }
 
-      const user = await register({
+      const result = await register({
         email: normalizedEmail,
         password, // do NOT trim; we already validated edges above
         displayName: displayName,
       });
 
-      await afterSignUp(user);
+      // Store verificationId and show verification code input
+      setVerificationId(result.verificationId);
+      setVerificationStep(true);
+      toast.success("Verification code sent! Please check your email.");
     } catch (err) {
       setError(err?.message || "Sign up failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleVerifyCode = async (e) => {
+    e.preventDefault();
+    setError("");
+    setBusy(true);
+    try {
+      if (verificationCode.length !== 6) {
+        throw new Error("Please enter a valid 6-digit code.");
+      }
+
+      await completeRegistration(verificationId, verificationCode);
+
+      toast.success("Registration successful! You can now sign in.");
+      navigate("/sign-in", { replace: true });
+    } catch (err) {
+      setError(err?.message || "Verification failed");
     } finally {
       setBusy(false);
     }
@@ -146,10 +167,17 @@ const SignUpLayer = () => {
             </div>
 
             <div className='text-center mb-4'>
-              <h3 className='fw-bold mb-2' style={{ color: '#2d3748' }}>Create Account</h3>
-              <p className='text-muted'>Join us today! Please fill in your details</p>
+              <h3 className='fw-bold mb-2' style={{ color: '#2d3748' }}>
+                {verificationStep ? 'Verify Your Email' : 'Create Account'}
+              </h3>
+              <p className='text-muted'>
+                {verificationStep
+                  ? 'Enter the 6-digit code sent to your email'
+                  : 'Join us today! Please fill in your details'}
+              </p>
             </div>
 
+            {!verificationStep ? (
             <form id='sign-up-form' onSubmit={handleSubmit}>
               {/* Username Input */}
               <div className='mb-3'>
@@ -312,6 +340,97 @@ const SignUpLayer = () => {
                 </p>
               </div>
             </form>
+            ) : (
+            <form id='verification-form' onSubmit={handleVerifyCode}>
+              {/* Verification Code Input */}
+              <div className='mb-3'>
+                <label className='form-label fw-semibold' style={{ color: '#4a5568' }}>Verification Code</label>
+                <div className='position-relative'>
+                  <span className='position-absolute top-50 translate-middle-y ms-3' style={{ zIndex: 10 }}>
+                    <Icon icon='mdi:shield-key' style={{ fontSize: '20px', color: '#9ca3af' }} />
+                  </span>
+                  <input
+                    type='text'
+                    className='form-control ps-5 py-3 text-center'
+                    placeholder='Enter 6-digit code'
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                    required
+                    maxLength={6}
+                    autoFocus
+                    style={{
+                      border: '2px solid #e2e8f0',
+                      borderRadius: '12px',
+                      fontSize: '24px',
+                      letterSpacing: '8px',
+                      fontWeight: 'bold',
+                      transition: 'all 0.3s ease'
+                    }}
+                    onFocus={(e) => e.target.style.borderColor = '#667eea'}
+                    onBlur={(e) => e.target.style.borderColor = '#e2e8f0'}
+                  />
+                </div>
+                <small className='text-muted d-block mt-2' style={{ fontSize: '12px' }}>
+                  <Icon icon='ph:info' className='me-1' />
+                  Check your email for the verification code
+                </small>
+              </div>
+
+              {/* Error Message */}
+              {error && (
+                <div className='alert alert-danger rounded-3 py-2' role='alert' style={{ fontSize: '14px' }}>
+                  <Icon icon='ph:warning-circle' className='me-2' />
+                  {error}
+                </div>
+              )}
+
+              {/* Verify Button */}
+              <button
+                type='submit'
+                className='btn w-100 py-3 fw-semibold text-white mb-3'
+                disabled={busy || verificationCode.length !== 6}
+                style={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: 'none',
+                  borderRadius: '12px',
+                  fontSize: '16px',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+                }}
+                onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+                onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+              >
+                {busy ? (
+                  <>
+                    <span className='spinner-border spinner-border-sm me-2' role='status' aria-hidden='true'></span>
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    <Icon icon='mdi:check-circle' className='me-2' style={{ fontSize: '18px' }} />
+                    Verify & Complete Registration
+                  </>
+                )}
+              </button>
+
+              {/* Back Link */}
+              <div className='text-center mt-4'>
+                <button
+                  type='button'
+                  className='btn btn-link text-decoration-none'
+                  onClick={() => {
+                    setVerificationStep(false);
+                    setVerificationCode('');
+                    setError('');
+                  }}
+                  style={{ color: '#667eea', fontSize: '14px' }}
+                >
+                  <Icon icon='mdi:arrow-left' className='me-1' />
+                  Back to registration
+                </button>
+              </div>
+            </form>
+            )}
           </div>
 
           {/* Footer Text */}

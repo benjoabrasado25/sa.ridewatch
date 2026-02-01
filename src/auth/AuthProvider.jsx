@@ -155,19 +155,67 @@ export function AuthProvider({ children }) {
     refreshProfile,
     login: (email, password) => signInWithEmailAndPassword(auth, email, password),
     register: async ({ email, password, displayName }) => {
-      const cred = await createUserWithEmailAndPassword(auth, email, password);
-      if (displayName) await updateProfile(cred.user, { displayName });
+      // Generate 6-digit verification code
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+      const verificationExpiry = new Date();
+      verificationExpiry.setMinutes(verificationExpiry.getMinutes() + 15); // 15 minute expiry
 
-      // Create user doc and company, then update profile state
+      // Store registration data and verification code in Firestore
+      const verificationRef = doc(collection(db, "verification_codes"));
+      await setDoc(verificationRef, {
+        email: email.toLowerCase().trim(),
+        password: password, // Temporarily store password
+        displayName: displayName || "",
+        verificationCode: verificationCode,
+        expiresAt: verificationExpiry,
+        verified: false,
+        createdAt: serverTimestamp(),
+      });
+
+      // Send verification email with code
+      await sendVerificationEmail(email, displayName || email, verificationCode);
+
+      return { verificationId: verificationRef.id, email };
+    },
+    completeRegistration: async (verificationId, code) => {
+      // Get verification doc
+      const verificationRef = doc(db, "verification_codes", verificationId);
+      const verificationSnap = await getDoc(verificationRef);
+
+      if (!verificationSnap.exists()) {
+        throw new Error('Invalid verification code');
+      }
+
+      const data = verificationSnap.data();
+
+      // Check if code matches
+      if (data.verificationCode !== code) {
+        throw new Error('Invalid verification code');
+      }
+
+      // Check if expired
+      if (data.expiresAt.toDate() < new Date()) {
+        throw new Error('Verification code expired');
+      }
+
+      // Check if already verified
+      if (data.verified) {
+        throw new Error('Verification code already used');
+      }
+
+      // Create Firebase account NOW
+      const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      if (data.displayName) await updateProfile(cred.user, { displayName: data.displayName });
+
       const userRef = doc(db, "users", cred.user.uid);
-      const companyName = displayName ? `${displayName}'s Bus Company` : "My Bus Company";
+      const companyName = data.displayName ? `${data.displayName}'s Bus Company` : "My Bus Company";
 
       // Create company
       const companyRef = await addDoc(collection(db, "companies"), {
         name: companyName,
         address: "",
         description: "School bus transportation services",
-        contact_person: displayName || "",
+        contact_person: data.displayName || "",
         contact_phone: "",
         owner_uid: cred.user.uid,
         createdAt: serverTimestamp(),
@@ -175,34 +223,24 @@ export function AuthProvider({ children }) {
         status: "active",
       });
 
-      // Generate email verification token
-      const verificationToken = generateVerificationToken();
-      const verificationExpiry = new Date();
-      verificationExpiry.setHours(verificationExpiry.getHours() + 24); // 24 hour expiry
-
-      // Create user doc with company_id and verification fields
+      // Create user doc
       await setDoc(userRef, {
         uid: cred.user.uid,
         email: cred.user.email,
-        displayName: displayName || "",
+        displayName: data.displayName || "",
         photoURL: cred.user.photoURL || "",
         account_type: "bus_company",
         company_id: companyRef.id,
-        emailVerified: false,
-        verificationToken: verificationToken,
-        verificationTokenExpiry: verificationExpiry,
+        emailVerified: true, // Already verified via code
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
 
-      // Send verification email (don't await - let it happen in background)
-      // If it fails, user still gets signed out and must contact support
-      sendVerificationEmail(cred.user.email, displayName || cred.user.email, verificationToken)
-        .catch(err => console.error('Failed to send verification email:', err));
+      // Mark verification as used
+      await setDoc(verificationRef, { verified: true }, { merge: true });
 
-      // Sign out immediately - user must verify email before accessing the app
-      await signOut(auth);
-      setProfile(null);
+      // Delete password from verification doc for security
+      await setDoc(verificationRef, { password: null }, { merge: true });
 
       return cred.user;
     },

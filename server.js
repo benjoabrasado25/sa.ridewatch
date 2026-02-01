@@ -38,14 +38,14 @@ app.post('/api/send-verification-email', async (req, res) => {
   // SendGrid configuration
   const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
   const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@ridewatch.org';
-  const APP_URL = process.env.REACT_APP_PUBLIC_URL || 'https://app.ridewatch.org';
 
   if (!SENDGRID_API_KEY) {
     console.error('SendGrid API key not configured');
     return res.status(500).json({ error: 'Email service not configured' });
   }
 
-  const verificationLink = `${APP_URL}/verify-email?token=${verificationToken}`;
+  // verificationToken is now the 6-digit code
+  const verificationCode = verificationToken;
   const safeName = sanitizeHtml(displayName.trim());
 
   const emailContent = {
@@ -64,11 +64,11 @@ app.post('/api/send-verification-email', async (req, res) => {
         type: 'text/plain',
         value: `Hi ${safeName},
 
-Welcome to RideWatch! Please verify your email address by clicking the link below:
+Welcome to RideWatch! Your verification code is:
 
-${verificationLink}
+${verificationCode}
 
-This link will expire in 24 hours.
+This code will expire in 15 minutes.
 
 If you didn't create an account with RideWatch, please ignore this email.
 
@@ -85,27 +85,16 @@ The RideWatch Team`,
             <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb;">
               <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">Hi ${safeName},</p>
               <p style="font-size: 16px; color: #374151; margin-bottom: 30px;">
-                Thank you for creating a RideWatch account. To get started, please verify your email address by clicking the button below:
+                Thank you for creating a RideWatch account. To complete your registration, please enter this verification code:
               </p>
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="${verificationLink}"
-                   style="background: #2563eb; color: white; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-size: 16px; font-weight: bold; display: inline-block;">
-                  Verify Email Address
-                </a>
-              </div>
-              <div style="text-align: center; margin: 30px 0; padding: 20px; background: #f9fafb; border-radius: 8px;">
-                <p style="font-size: 14px; color: #374151; margin-bottom: 15px; font-weight: bold;">
-                  Or scan this QR code:
+              <div style="text-align: center; margin: 30px 0; padding: 20px; background: #f0f4ff; border-radius: 12px;">
+                <p style="font-size: 14px; color: #374151; margin-bottom: 10px; font-weight: 600;">Your Verification Code</p>
+                <p style="font-size: 48px; color: #2563eb; font-weight: bold; letter-spacing: 8px; margin: 0; font-family: 'Courier New', monospace;">
+                  ${verificationCode}
                 </p>
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(verificationLink)}"
-                     alt="QR Code for Email Verification"
-                     style="width: 200px; height: 200px; margin: 0 auto; display: block;" />
               </div>
-              <p style="font-size: 14px; color: #6b7280; margin-top: 30px;">
-                This link will expire in 24 hours. If the button doesn't work, copy and paste this link into your browser:
-              </p>
-              <p style="font-size: 14px; color: #2563eb; word-break: break-all; margin-top: 10px;">
-                ${verificationLink}
+              <p style="font-size: 14px; color: #6b7280; margin-top: 30px; text-align: center;">
+                This code will expire in <strong>15 minutes</strong>.
               </p>
               <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 30px; border-top: 1px solid #e5e7eb;">
                 If you didn't create an account with RideWatch, please ignore this email.
