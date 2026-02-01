@@ -89,6 +89,7 @@ export default function AcceptInvitePage() {
       // 2) Merge driver profile fields into users/{uid}
       //    ✅ Ensure user is ACTIVATED on creation
       //    ✅ Use school_ids array to support multiple schools
+      //    ✅ Mark email as verified (they came from email invitation)
       await setDoc(
         doc(db, 'users', user.uid),
         {
@@ -101,6 +102,9 @@ export default function AcceptInvitePage() {
           phone: phone.trim(),
           driver_license_no: licenseNo.trim(),
           plate_no: plateNo.trim(),
+          emailVerified: true,                // <— Already verified via email invitation
+          verificationToken: null,            // <— Clear any verification token
+          verificationTokenExpiry: null,      // <— Clear expiry
           createdAt: serverTimestamp(),       // safe to set; server will keep earliest
           updatedAt: serverTimestamp(),
         },

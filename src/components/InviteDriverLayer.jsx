@@ -258,6 +258,40 @@ const InviteDriverLayer = () => {
         token
       )}`;
       setInviteLink(acceptUrl);
+
+      // Send invitation email
+      try {
+        // Get school name
+        const schoolDoc = await getDoc(doc(db, "schools", schoolId));
+        const schoolName = schoolDoc.exists() ? schoolDoc.data().name : "School";
+
+        // Call email API
+        const apiUrl = process.env.REACT_APP_EMAIL_API_URL || 'https://www.ridewatch.org/api';
+        const emailResponse = await fetch(`${apiUrl}/send-driver-invitation`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email,
+            schoolName,
+            inviterName: user.displayName || user.email,
+            invitationLink: acceptUrl,
+            expiresAt: expiresAt.toISOString(),
+          }),
+        });
+
+        if (!emailResponse.ok) {
+          console.error('Failed to send invitation email');
+          toast.warning('Invitation created but email sending failed. Please share the link manually.');
+        } else {
+          toast.success('Invitation email sent successfully!');
+        }
+      } catch (emailError) {
+        console.error('Error sending invitation email:', emailError);
+        // Don't fail the whole operation if email fails
+        toast.warning('Invitation created but email sending failed. Please share the link manually.');
+      }
     } catch (err) {
       setInviteError(err?.message || "Failed to create invite.");
     } finally {

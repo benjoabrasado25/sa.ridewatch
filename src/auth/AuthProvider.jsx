@@ -13,6 +13,41 @@ import { auth, db, ensureAuthPersistence } from "../lib/firebase";
 
 import { doc, getDoc, serverTimestamp, setDoc, collection, addDoc } from "firebase/firestore";
 
+// Generate random token for email verification
+function generateVerificationToken() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(32)))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+// Send verification email via marketing API
+async function sendVerificationEmail(email, displayName, token) {
+  const apiUrl = process.env.REACT_APP_EMAIL_API_URL || 'https://www.ridewatch.org/api';
+
+  try {
+    const response = await fetch(`${apiUrl}/send-verification-email`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email,
+        displayName,
+        verificationToken: token,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to send verification email');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error sending verification email:', error);
+    throw error;
+  }
+}
+
 const AuthCtx = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -132,7 +167,12 @@ export function AuthProvider({ children }) {
         status: "active",
       });
 
-      // Create user doc with company_id
+      // Generate email verification token
+      const verificationToken = generateVerificationToken();
+      const verificationExpiry = new Date();
+      verificationExpiry.setHours(verificationExpiry.getHours() + 24); // 24 hour expiry
+
+      // Create user doc with company_id and verification fields
       await setDoc(userRef, {
         uid: cred.user.uid,
         email: cred.user.email,
@@ -140,6 +180,9 @@ export function AuthProvider({ children }) {
         photoURL: cred.user.photoURL || "",
         account_type: "bus_company",
         company_id: companyRef.id,
+        emailVerified: false,
+        verificationToken: verificationToken,
+        verificationTokenExpiry: verificationExpiry,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       });
@@ -147,6 +190,10 @@ export function AuthProvider({ children }) {
       // Update profile state immediately
       const newProfile = (await getDoc(userRef)).data();
       setProfile(newProfile);
+
+      // Send verification email (don't await - let it happen in background)
+      sendVerificationEmail(cred.user.email, displayName || cred.user.email, verificationToken)
+        .catch(err => console.error('Failed to send verification email:', err));
 
       return cred.user;
     },

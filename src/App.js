@@ -16,6 +16,7 @@ import SignInPage from "./pages/SignInPage";
 import SignUpPage from "./pages/SignUpPage";
 import AcceptInvitePage from "./pages/AcceptInvitePage";
 import InviteSuccessPage from "./pages/InviteSuccessPage";
+import VerifyEmailPage from "./pages/VerifyEmailPage";
 
 import DriverRoutesPage from "./pages/DriverRoutesPage";
 import SchoolQRPage from "./pages/SchoolQRPage";
@@ -44,6 +45,7 @@ function App() {
           {/* ===== PUBLIC (ONLY auth pages) ===== */}
           <Route path="/sign-in" element={<SignInPage />} />
           <Route path="/sign-up" element={<SignUpPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/accept-invite" element={<AcceptInvitePage />} />
           <Route path="/invite-success" element={<InviteSuccessPage />} />
           <Route path="/school/:schoolId" element={<SchoolQRPage />} />
