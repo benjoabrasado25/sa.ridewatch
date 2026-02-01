@@ -13,13 +13,6 @@ import { auth, db, ensureAuthPersistence } from "../lib/firebase";
 
 import { doc, getDoc, serverTimestamp, setDoc, collection, addDoc } from "firebase/firestore";
 
-// Generate random token for email verification
-function generateVerificationToken() {
-  return Array.from(crypto.getRandomValues(new Uint8Array(32)))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('');
-}
-
 // Send verification email via marketing API
 async function sendVerificationEmail(email, displayName, token) {
   const apiUrl = process.env.REACT_APP_EMAIL_API_URL || 'https://www.ridewatch.org/api';
