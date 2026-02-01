@@ -2,8 +2,6 @@ import { Icon } from "@iconify/react/dist/iconify.js";
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthProvider";
-import { auth, db } from "../lib/firebase"; // <-- bring in auth to signOut()
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import { useToast } from "./Toast";
 
 const SignUpLayer = () => {
