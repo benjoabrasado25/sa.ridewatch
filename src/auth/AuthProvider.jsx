@@ -13,9 +13,9 @@ import { auth, db, ensureAuthPersistence } from "../lib/firebase";
 
 import { doc, getDoc, serverTimestamp, setDoc, collection, addDoc } from "firebase/firestore";
 
-// Send verification email via marketing API
+// Send verification email via admin API
 async function sendVerificationEmail(email, displayName, token) {
-  const apiUrl = process.env.REACT_APP_EMAIL_API_URL || 'https://www.ridewatch.org/api';
+  const apiUrl = process.env.REACT_APP_EMAIL_API_URL || 'https://app.ridewatch.org/api';
 
   try {
     const response = await fetch(`${apiUrl}/send-verification-email`, {

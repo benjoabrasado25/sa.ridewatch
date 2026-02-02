@@ -266,7 +266,7 @@ const InviteDriverLayer = () => {
         const schoolName = schoolDoc.exists() ? schoolDoc.data().name : "School";
 
         // Call email API
-        const apiUrl = process.env.REACT_APP_EMAIL_API_URL || 'https://www.ridewatch.org/api';
+        const apiUrl = process.env.REACT_APP_EMAIL_API_URL || 'https://app.ridewatch.org/api';
         const emailResponse = await fetch(`${apiUrl}/send-driver-invitation`, {
           method: 'POST',
           headers: {

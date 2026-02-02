@@ -126,5 +126,17 @@ service cloud.firestore {
       // Only authenticated users can delete invites
       allow delete: if signedIn();
     }
+
+    // ===== VERIFICATION CODES =====
+    match /verification_codes/{verificationId} {
+      // Anyone can create verification codes (needed for registration)
+      allow create: if true;
+
+      // Anyone can read and update their own verification code
+      allow read, update: if true;
+
+      // Only authenticated users can delete verification codes (cleanup)
+      allow delete: if signedIn();
+    }
   }
 }
