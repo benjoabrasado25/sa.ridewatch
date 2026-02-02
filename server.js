@@ -226,6 +226,94 @@ app.post('/api/send-driver-invitation', async (req, res) => {
   }
 });
 
+// Contact form endpoint (for marketing site)
+app.post('/api/send-contact-email', async (req, res) => {
+  const { name, email, phone, subject, message } = req.body;
+
+  // Validate required fields
+  if (!name || !email || !subject || !message) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email address' });
+  }
+
+  // Resend configuration
+  const RESEND_API_KEY = process.env.RESEND_API_KEY;
+  const TO_EMAIL = process.env.CONTACT_EMAIL || 'support@ridewatch.org';
+  const FROM_EMAIL = process.env.FROM_EMAIL || 'RideWatch <noreply@ridewatch.org>';
+
+  if (!RESEND_API_KEY) {
+    console.error('Resend API key not configured');
+    return res.status(500).json({ error: 'Email service not configured' });
+  }
+
+  const resend = new Resend(RESEND_API_KEY);
+
+  const safeName = sanitizeHtml(name.trim());
+  const safeEmail = sanitizeHtml(email.trim());
+  const safePhone = sanitizeHtml(phone?.trim() || '');
+  const safeSubject = sanitizeHtml(subject.trim());
+  const safeMessage = sanitizeHtml(message.trim());
+
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <div style="background: linear-gradient(to right, #2563eb, #1d4ed8); padding: 20px; border-radius: 8px 8px 0 0;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">New Contact Form Submission</h1>
+      </div>
+      <div style="background: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #374151; width: 120px;">Name:</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #1f2937;">${safeName}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Email:</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #1f2937;">
+              <a href="mailto:${safeEmail}" style="color: #2563eb;">${safeEmail}</a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Phone:</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #1f2937;">${safePhone || 'Not provided'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; font-weight: bold; color: #374151;">Subject:</td>
+            <td style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #1f2937;">${safeSubject}</td>
+          </tr>
+        </table>
+        <div style="margin-top: 20px;">
+          <h3 style="color: #374151; margin-bottom: 10px;">Message:</h3>
+          <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; color: #1f2937; white-space: pre-wrap;">${safeMessage}</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [TO_EMAIL],
+      replyTo: email.trim(),
+      subject: `[RideWatch Contact] ${safeSubject}`,
+      html: htmlContent,
+    });
+
+    if (error) {
+      console.error('Resend error:', error);
+      return res.status(500).json({ error: 'Failed to send contact email' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Contact email sent', id: data.id });
+  } catch (error) {
+    console.error('Error sending contact email:', error);
+    return res.status(500).json({ error: 'Failed to send email' });
+  }
+});
+
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, 'build')));
 
