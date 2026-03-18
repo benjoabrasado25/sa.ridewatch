@@ -6,17 +6,30 @@ const Stripe = require('stripe');
 const admin = require('firebase-admin');
 
 // Initialize Firebase Admin SDK
-// You'll need to download your service account key from Firebase Console
-// Go to: Project Settings > Service Accounts > Generate New Private Key
-// Save it as 'serviceAccountKey.json' in this directory
+// Option 1: Use FIREBASE_SERVICE_ACCOUNT env var (JSON string) - recommended for Railway
+// Option 2: Use serviceAccountKey.json file (for local development)
 if (!admin.apps.length) {
   try {
-    const serviceAccount = require('./serviceAccountKey.json');
+    let serviceAccount;
+
+    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
+      // Parse from environment variable (Railway deployment)
+      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+      console.log('Firebase Admin: Using credentials from environment variable');
+    } else {
+      // Fall back to local file (local development)
+      serviceAccount = require('./serviceAccountKey.json');
+      console.log('Firebase Admin: Using credentials from serviceAccountKey.json');
+    }
+
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount)
     });
+    console.log('Firebase Admin SDK initialized successfully');
   } catch (e) {
-    console.error('Firebase Admin initialization error. Make sure serviceAccountKey.json exists:', e.message);
+    console.error('Firebase Admin initialization error:', e.message);
+    console.error('For Railway: Set FIREBASE_SERVICE_ACCOUNT env var with your service account JSON');
+    console.error('For local: Save serviceAccountKey.json in the project root');
   }
 }
 
