@@ -2,6 +2,56 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const { Resend } = require('resend');
+const Stripe = require('stripe');
+const admin = require('firebase-admin');
+
+// Initialize Firebase Admin SDK
+// You'll need to download your service account key from Firebase Console
+// Go to: Project Settings > Service Accounts > Generate New Private Key
+// Save it as 'serviceAccountKey.json' in this directory
+if (!admin.apps.length) {
+  try {
+    const serviceAccount = require('./serviceAccountKey.json');
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount)
+    });
+  } catch (e) {
+    console.error('Firebase Admin initialization error. Make sure serviceAccountKey.json exists:', e.message);
+  }
+}
+
+// Stripe Configuration - Toggle between sandbox and production
+const STRIPE_MODE = process.env.STRIPE_MODE || 'sandbox'; // 'sandbox' or 'production'
+const isProduction = STRIPE_MODE === 'production';
+
+// Select keys based on mode
+const STRIPE_SECRET_KEY = isProduction
+  ? process.env.STRIPE_LIVE_SECRET_KEY
+  : process.env.STRIPE_TEST_SECRET_KEY;
+
+const STRIPE_PUBLISHABLE_KEY = isProduction
+  ? process.env.STRIPE_LIVE_PUBLISHABLE_KEY
+  : process.env.STRIPE_TEST_PUBLISHABLE_KEY;
+
+const STRIPE_PRICES = {
+  monthly: isProduction
+    ? process.env.STRIPE_LIVE_MONTHLY_PRICE_ID
+    : process.env.STRIPE_TEST_MONTHLY_PRICE_ID,
+  yearly: isProduction
+    ? process.env.STRIPE_LIVE_YEARLY_PRICE_ID
+    : process.env.STRIPE_TEST_YEARLY_PRICE_ID,
+};
+
+const STRIPE_WEBHOOK_SECRET = isProduction
+  ? process.env.STRIPE_LIVE_WEBHOOK_SECRET
+  : process.env.STRIPE_TEST_WEBHOOK_SECRET;
+
+// Initialize Stripe with selected key
+const stripe = new Stripe(STRIPE_SECRET_KEY, {
+  apiVersion: '2023-10-16',
+});
+
+console.log(`Stripe running in ${STRIPE_MODE.toUpperCase()} mode`);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,6 +77,11 @@ const corsOptions = {
 
 // Middleware
 app.use(cors(corsOptions));
+
+// Special handling for Stripe webhook (needs raw body)
+app.use('/api/stripe-webhook', express.raw({ type: 'application/json' }));
+
+// JSON parsing for all other routes
 app.use(express.json());
 
 // Sanitize HTML to prevent XSS
@@ -313,6 +368,321 @@ app.post('/api/send-contact-email', async (req, res) => {
     return res.status(500).json({ error: 'Failed to send email' });
   }
 });
+
+// ============================================
+// STRIPE SUBSCRIPTION ENDPOINTS
+// ============================================
+
+// Create Payment Sheet for in-app subscription
+app.post('/api/create-payment-sheet', async (req, res) => {
+  const { uid, email, displayName, plan } = req.body;
+
+  if (!uid || !plan) {
+    return res.status(400).json({ error: 'Missing required fields: uid and plan' });
+  }
+
+  if (!['monthly', 'yearly'].includes(plan)) {
+    return res.status(400).json({ error: 'Invalid plan. Must be "monthly" or "yearly"' });
+  }
+
+  try {
+    const db = admin.firestore();
+    const userDoc = await db.collection('users').doc(uid).get();
+    const userData = userDoc.data();
+
+    let customerId = userData?.subscription?.stripeCustomerId;
+
+    // Create Stripe customer if doesn't exist
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: email || userData?.email,
+        name: displayName || userData?.displayName,
+        metadata: {
+          firebaseUID: uid,
+        },
+      });
+      customerId = customer.id;
+
+      // Save customer ID to Firestore
+      await db.collection('users').doc(uid).set({
+        subscription: {
+          stripeCustomerId: customerId,
+        },
+      }, { merge: true });
+    }
+
+    // Create ephemeral key for the customer
+    const ephemeralKey = await stripe.ephemeralKeys.create(
+      { customer: customerId },
+      { apiVersion: '2023-10-16' }
+    );
+
+    // Create subscription with incomplete payment
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: STRIPE_PRICES[plan] }],
+      payment_behavior: 'default_incomplete',
+      payment_settings: { save_default_payment_method: 'on_subscription' },
+      expand: ['latest_invoice.payment_intent'],
+      metadata: {
+        firebaseUID: uid,
+        plan: plan,
+      },
+    });
+
+    const paymentIntent = subscription.latest_invoice.payment_intent;
+
+    return res.status(200).json({
+      paymentIntent: paymentIntent.client_secret,
+      ephemeralKey: ephemeralKey.secret,
+      customer: customerId,
+      subscriptionId: subscription.id,
+      publishableKey: STRIPE_PUBLISHABLE_KEY,
+    });
+  } catch (error) {
+    console.error('Error creating payment sheet:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Stripe Webhook Handler
+app.post('/api/stripe-webhook', async (req, res) => {
+  const sig = req.headers['stripe-signature'];
+
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  const db = admin.firestore();
+
+  // Handle the event
+  switch (event.type) {
+    case 'customer.subscription.created':
+    case 'customer.subscription.updated': {
+      const subscription = event.data.object;
+      await handleSubscriptionUpdate(db, subscription);
+      break;
+    }
+
+    case 'customer.subscription.deleted': {
+      const subscription = event.data.object;
+      await handleSubscriptionDeleted(db, subscription);
+      break;
+    }
+
+    case 'invoice.payment_succeeded': {
+      const invoice = event.data.object;
+      if (invoice.subscription) {
+        const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+        await handleSubscriptionUpdate(db, subscription);
+      }
+      break;
+    }
+
+    case 'invoice.payment_failed': {
+      const invoice = event.data.object;
+      await handlePaymentFailed(db, invoice);
+      break;
+    }
+
+    default:
+      console.log(`Unhandled event type: ${event.type}`);
+  }
+
+  res.json({ received: true });
+});
+
+// Helper: Update subscription in Firestore
+async function handleSubscriptionUpdate(db, subscription) {
+  const customerId = subscription.customer;
+
+  const usersSnapshot = await db
+    .collection('users')
+    .where('subscription.stripeCustomerId', '==', customerId)
+    .limit(1)
+    .get();
+
+  if (usersSnapshot.empty) {
+    console.error('No user found for customer:', customerId);
+    return;
+  }
+
+  const userDoc = usersSnapshot.docs[0];
+  const plan = subscription.metadata?.plan ||
+    (subscription.items.data[0]?.price?.id === STRIPE_PRICES.yearly ? 'yearly' : 'monthly');
+
+  let status;
+  switch (subscription.status) {
+    case 'active':
+    case 'trialing':
+      status = 'active';
+      break;
+    case 'past_due':
+      status = 'past_due';
+      break;
+    case 'canceled':
+    case 'unpaid':
+      status = 'canceled';
+      break;
+    default:
+      status = subscription.status;
+  }
+
+  await userDoc.ref.set({
+    subscription: {
+      status: status,
+      stripeSubscriptionId: subscription.id,
+      plan: plan,
+      currentPeriodEnd: admin.firestore.Timestamp.fromMillis(subscription.current_period_end * 1000),
+      cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    },
+  }, { merge: true });
+
+  console.log(`Updated subscription for user ${userDoc.id}: ${status}`);
+}
+
+// Helper: Handle subscription deletion
+async function handleSubscriptionDeleted(db, subscription) {
+  const customerId = subscription.customer;
+
+  const usersSnapshot = await db
+    .collection('users')
+    .where('subscription.stripeCustomerId', '==', customerId)
+    .limit(1)
+    .get();
+
+  if (usersSnapshot.empty) {
+    console.error('No user found for customer:', customerId);
+    return;
+  }
+
+  const userDoc = usersSnapshot.docs[0];
+
+  await userDoc.ref.set({
+    subscription: {
+      status: 'expired',
+      stripeSubscriptionId: null,
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+    },
+  }, { merge: true });
+
+  console.log(`Subscription expired for user ${userDoc.id}`);
+}
+
+// Helper: Handle payment failure
+async function handlePaymentFailed(db, invoice) {
+  if (!invoice.subscription) return;
+
+  const subscription = await stripe.subscriptions.retrieve(invoice.subscription);
+  const customerId = subscription.customer;
+
+  const usersSnapshot = await db
+    .collection('users')
+    .where('subscription.stripeCustomerId', '==', customerId)
+    .limit(1)
+    .get();
+
+  if (usersSnapshot.empty) return;
+
+  const userDoc = usersSnapshot.docs[0];
+
+  await userDoc.ref.set({
+    subscription: {
+      status: 'past_due',
+    },
+  }, { merge: true });
+
+  console.log(`Payment failed for user ${userDoc.id}`);
+}
+
+// Cancel subscription endpoint
+app.post('/api/cancel-subscription', async (req, res) => {
+  const { uid } = req.body;
+
+  if (!uid) {
+    return res.status(400).json({ error: 'Missing uid' });
+  }
+
+  try {
+    const db = admin.firestore();
+    const userDoc = await db.collection('users').doc(uid).get();
+    const subscriptionId = userDoc.data()?.subscription?.stripeSubscriptionId;
+
+    if (!subscriptionId) {
+      return res.status(404).json({ error: 'No active subscription found' });
+    }
+
+    // Cancel at period end
+    const subscription = await stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: true,
+    });
+
+    // Update Firestore
+    await db.collection('users').doc(uid).set({
+      subscription: {
+        status: 'canceled',
+        cancelAtPeriodEnd: true,
+        currentPeriodEnd: admin.firestore.Timestamp.fromMillis(subscription.current_period_end * 1000),
+      },
+    }, { merge: true });
+
+    return res.status(200).json({
+      success: true,
+      message: 'Subscription will be canceled at the end of the billing period',
+      cancelAt: new Date(subscription.current_period_end * 1000).toISOString(),
+    });
+  } catch (error) {
+    console.error('Error canceling subscription:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// Reactivate subscription endpoint
+app.post('/api/reactivate-subscription', async (req, res) => {
+  const { uid } = req.body;
+
+  if (!uid) {
+    return res.status(400).json({ error: 'Missing uid' });
+  }
+
+  try {
+    const db = admin.firestore();
+    const userDoc = await db.collection('users').doc(uid).get();
+    const subscriptionId = userDoc.data()?.subscription?.stripeSubscriptionId;
+
+    if (!subscriptionId) {
+      return res.status(404).json({ error: 'No subscription found' });
+    }
+
+    // Remove cancellation
+    await stripe.subscriptions.update(subscriptionId, {
+      cancel_at_period_end: false,
+    });
+
+    // Update Firestore
+    await db.collection('users').doc(uid).set({
+      subscription: {
+        status: 'active',
+        cancelAtPeriodEnd: false,
+      },
+    }, { merge: true });
+
+    return res.status(200).json({ success: true, message: 'Subscription reactivated' });
+  } catch (error) {
+    console.error('Error reactivating subscription:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
+// STATIC FILES
+// ============================================
 
 // Serve static files from the React app
 app.use(express.static(path.join(__dirname, 'build')));
