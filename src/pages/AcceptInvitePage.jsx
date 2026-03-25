@@ -2,15 +2,14 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
-import { useAuth } from '../auth/AuthProvider';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { db, auth } from '../lib/firebase';
 
 export default function AcceptInvitePage() {
   const [params] = useSearchParams();
   const rawToken = params.get('token') || '';
   const token = rawToken.trim();
   const navigate = useNavigate();
-  const { register } = useAuth();
 
   const [invite, setInvite] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -79,12 +78,11 @@ export default function AcceptInvitePage() {
     try {
       setBusy(true);
 
-      // 1) Create the user with the invited email
-      const user = await register({
-        email: String(invite.email || '').toLowerCase().trim(),
-        password: pwd,
-        displayName: fullName.trim(),
-      });
+      // 1) Create the user directly with Firebase Auth (driver invitation - already verified via email)
+      const email = String(invite.email || '').toLowerCase().trim();
+      const cred = await createUserWithEmailAndPassword(auth, email, pwd);
+      await updateProfile(cred.user, { displayName: fullName.trim() });
+      const user = cred.user;
 
       // 2) Merge driver profile fields into users/{uid}
       //    ✅ Ensure user is ACTIVATED on creation
