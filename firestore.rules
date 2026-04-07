@@ -100,9 +100,12 @@ service cloud.firestore {
 
       // ===== ACTIVE DRIVERS (subcollection of routes) =====
       match /routes/{routeId}/active_drivers/{driverId} {
-        // Company members and the driver can read
+        // Anyone signed in who has joined this school can read active driver locations
+        // This allows parents/users to see bus locations
         allow read: if signedIn()
-          && (isSchoolInMyCompany(schoolId) || request.auth.uid == driverId);
+          && (isSchoolInMyCompany(schoolId)
+              || request.auth.uid == driverId
+              || schoolId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.school_ids);
 
         // Drivers can create/update/delete their own status
         allow create, update, delete: if signedIn() && request.auth.uid == driverId;

@@ -1,5 +1,5 @@
 import { Icon } from "@iconify/react";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import { db } from "../lib/firebase";
 import { useToast } from "./Toast";
@@ -18,7 +18,7 @@ import {
   Timestamp,
 } from "firebase/firestore";
 
-/** Small modal component (no external JS needed) */
+/** Small modal component */
 function Modal({ open, title, children, onClose }) {
   if (!open) return null;
   return (
@@ -54,9 +54,6 @@ const InviteDriverLayer = () => {
 
   const canInvite = useMemo(() => !!user && !!schoolId, [user, schoolId]);
 
-  // Confirmation modal state
-  const [confirmModal, setConfirmModal] = useState({ open: false, title: "", message: "", onConfirm: null });
-
   // Invite modal state
   const [showInvite, setShowInvite] = useState(false);
   const [busyInvite, setBusyInvite] = useState(false);
@@ -68,13 +65,9 @@ const InviteDriverLayer = () => {
   const [showAssign, setShowAssign] = useState(false);
   const [allDrivers, setAllDrivers] = useState([]);
   const [assignError, setAssignError] = useState("");
-  const [assignUnsub, setAssignUnsub] = useState(null); // Track unsubscribe function
+  const [assignUnsub, setAssignUnsub] = useState(null);
 
-  // Drivers list state
-  const [drivers, setDrivers] = useState(null); // null = loading; [] = empty
-  const [listError, setListError] = useState("");
-
-  // Open/close modal
+  // Open/close invite modal
   const openInvite = () => {
     setInviteError("");
     setInviteLink("");
@@ -85,19 +78,18 @@ const InviteDriverLayer = () => {
     if (!busyInvite) setShowInvite(false);
   };
 
+  // Open/close assign modal
   const openAssign = async () => {
     setShowAssign(true);
     setAssignError("");
     setAllDrivers([]);
 
-    // Security fix: Only load drivers that belong to schools in the current user's company
     try {
       if (!profile?.company_id) {
         setAssignError("No company associated with your account.");
         return;
       }
 
-      // 1. Get all school IDs for the current company
       const schoolsQuery = query(
         collection(db, "schools"),
         where("company_id", "==", profile.company_id)
@@ -110,28 +102,25 @@ const InviteDriverLayer = () => {
         return;
       }
 
-      // 2. Query all drivers and filter client-side
-      // (Firestore doesn't support array-contains-any with another array)
       const q = query(
         collection(db, "users"),
         where("account_type", "==", "driver")
       );
       const unsub = onSnapshot(q, (snapshot) => {
         const allDrvs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        // Filter: only drivers who have at least one school_id in companySchoolIds
         const filteredDrivers = allDrvs.filter(driver => {
           const driverSchools = driver.school_ids || [];
           return driverSchools.some(sid => companySchoolIds.includes(sid));
         });
         setAllDrivers(filteredDrivers);
       });
-      setAssignUnsub(() => unsub); // Store unsubscribe function
+      setAssignUnsub(() => unsub);
     } catch (err) {
       setAssignError(err?.message || "Failed to load drivers");
     }
   };
+
   const closeAssign = () => {
-    // Clean up listener when modal closes
     if (assignUnsub) {
       assignUnsub();
       setAssignUnsub(null);
@@ -169,41 +158,6 @@ const InviteDriverLayer = () => {
     }
   }
 
-  // Load drivers for this school (live)
-  useEffect(() => {
-    if (!canInvite) {
-      setDrivers([]); // Set to empty array instead of null when no school
-      return;
-    }
-    setDrivers(null);
-    setListError("");
-
-    console.log('Loading drivers for schoolId:', schoolId);
-
-    // users where school_ids array contains current schoolId && account_type == driver
-    const q = query(
-      collection(db, "users"),
-      where("school_ids", "array-contains", schoolId),
-      where("account_type", "==", "driver")
-    );
-
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-        console.log('Drivers found:', rows.length, rows);
-        setDrivers(rows);
-      },
-      (err) => {
-        console.error('Error loading drivers:', err);
-        setListError(err?.message || "Failed to load drivers.");
-        setDrivers([]);
-      }
-    );
-
-    return () => unsub();
-  }, [canInvite, schoolId]);
-
   async function submitInvite(e) {
     e.preventDefault();
     setInviteError("");
@@ -223,7 +177,6 @@ const InviteDriverLayer = () => {
     try {
       setBusyInvite(true);
 
-      // Check if email is already registered (any account type)
       const existingQuery = query(
         collection(db, "users"),
         where("email", "==", email)
@@ -245,7 +198,7 @@ const InviteDriverLayer = () => {
 
       const token = createToken();
       const now = new Date();
-      const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
       await setDoc(doc(db, "invites", token), {
         token,
@@ -258,24 +211,17 @@ const InviteDriverLayer = () => {
         expiresAt: Timestamp.fromDate(expiresAt),
       });
 
-      const acceptUrl = `${window.location.origin}/accept-invite?token=${encodeURIComponent(
-        token
-      )}`;
+      const acceptUrl = `${window.location.origin}/accept-invite?token=${encodeURIComponent(token)}`;
       setInviteLink(acceptUrl);
 
-      // Send invitation email
       try {
-        // Get school name
         const schoolDoc = await getDoc(doc(db, "schools", schoolId));
         const schoolName = schoolDoc.exists() ? schoolDoc.data().name : "School";
 
-        // Call email API
         const apiUrl = process.env.REACT_APP_EMAIL_API_URL || 'https://app.ridewatch.org/api';
         const emailResponse = await fetch(`${apiUrl}/send-driver-invitation`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             email,
             schoolName,
@@ -286,14 +232,11 @@ const InviteDriverLayer = () => {
         });
 
         if (!emailResponse.ok) {
-          console.error('Failed to send invitation email');
           toast.warning('Invitation created but email sending failed. Please share the link manually.');
         } else {
           toast.success('Invitation email sent successfully!');
         }
       } catch (emailError) {
-        console.error('Error sending invitation email:', emailError);
-        // Don't fail the whole operation if email fails
         toast.warning('Invitation created but email sending failed. Please share the link manually.');
       }
     } catch (err) {
@@ -310,51 +253,11 @@ const InviteDriverLayer = () => {
     });
   }
 
-  async function toggleDriverStatus(driver) {
-    // status: 'active' | 'inactive' (default to 'active' if missing)
-    const current = (driver.status || "active").toLowerCase();
-    const next = current === "active" ? "inactive" : "active";
-
-    try {
-      await updateDoc(doc(db, "users", driver.id), {
-        status: next,
-        updatedAt: serverTimestamp(),
-      });
-      toast.success(`Driver ${next === "active" ? "activated" : "deactivated"} successfully.`);
-    } catch (e) {
-      toast.error(e?.message || "Failed to update driver status.");
-    }
-  }
-
-  async function removeDriverFromSchool(driver) {
-    setConfirmModal({
-      open: true,
-      title: "Remove Driver",
-      message: `Remove ${driver.displayName || driver.email} from this school?`,
-      onConfirm: async () => {
-        setConfirmModal({ open: false, title: "", message: "", onConfirm: null });
-        try {
-          const currentSchools = driver.school_ids || [];
-          const updatedSchools = currentSchools.filter(id => id !== schoolId);
-
-          await updateDoc(doc(db, "users", driver.id), {
-            school_ids: updatedSchools,
-            updatedAt: serverTimestamp(),
-          });
-
-          toast.success("Driver removed from this school.");
-        } catch (e) {
-          toast.error(e?.message || "Failed to remove driver from school.");
-        }
-      },
-    });
-  }
-
   if (loading) return null;
 
   return (
     <section className="container py-5">
-      {/* School Selector - only show if user has a school */}
+      {/* School Selector */}
       {canInvite && (
         <div className="mb-4">
           <SchoolSelector />
@@ -364,31 +267,10 @@ const InviteDriverLayer = () => {
       {/* Header */}
       <div className="d-flex align-items-center justify-content-between mb-4">
         <div>
-          <h3 className="mb-1">Drivers</h3>
+          <h3 className="mb-1">Invite Driver</h3>
           <p className="text-secondary mb-0">
-            Invite new drivers and manage their status for the selected school.
+            Invite new drivers or assign existing drivers to the selected school.
           </p>
-        </div>
-
-        <div className="d-flex gap-2">
-          <button
-            className="btn btn-outline-primary radius-12 d-flex align-items-center gap-2"
-            onClick={openAssign}
-            disabled={!canInvite}
-            title={!canInvite ? "You must select a school." : "Assign Existing Driver"}
-          >
-            <Icon icon="mingcute:user-add-line" />
-            Assign Existing Driver
-          </button>
-          <button
-            className="btn btn-primary radius-12 d-flex align-items-center gap-2"
-            onClick={openInvite}
-            disabled={!canInvite}
-            title={!canInvite ? "You must select a school." : "Invite New Driver"}
-          >
-            <Icon icon="mingcute:add-line" />
-            Invite New Driver
-          </button>
         </div>
       </div>
 
@@ -397,7 +279,7 @@ const InviteDriverLayer = () => {
           <Icon icon="mdi:alert-circle-outline" style={{ fontSize: '24px', marginTop: '2px' }} />
           <div>
             <h6 className="mb-2">No School Selected</h6>
-            <p className="mb-2">You don't have an associated school yet. Please create a school first to invite and manage drivers.</p>
+            <p className="mb-2">You don't have an associated school yet. Please create a school first to invite drivers.</p>
             <a href="/schools" className="btn btn-sm btn-warning">
               <Icon icon="mdi:plus-circle" className="me-1" />
               Create School
@@ -406,98 +288,74 @@ const InviteDriverLayer = () => {
         </div>
       )}
 
-      {/* Drivers list */}
-      {listError && <div className="alert alert-danger">{listError}</div>}
+      {/* Action Cards */}
+      {canInvite && (
+        <div className="row g-4">
+          {/* Invite New Driver Card */}
+          <div className="col-md-6">
+            <div className="card h-100 border-0 shadow-sm">
+              <div className="card-body text-center p-5">
+                <div className="mb-4">
+                  <div
+                    className="d-inline-flex align-items-center justify-content-center rounded-circle"
+                    style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' }}
+                  >
+                    <Icon icon="mdi:email-plus-outline" style={{ fontSize: '40px', color: '#fff' }} />
+                  </div>
+                </div>
+                <h4 className="mb-3">Invite New Driver</h4>
+                <p className="text-secondary mb-4">
+                  Send an email invitation to a new driver. They will create their account and be automatically assigned to this school.
+                </p>
+                <button
+                  className="btn btn-primary btn-lg radius-12 px-5"
+                  onClick={openInvite}
+                >
+                  <Icon icon="mingcute:add-line" className="me-2" />
+                  Send Invitation
+                </button>
+              </div>
+            </div>
+          </div>
 
-      {drivers === null ? (
-        <div className="text-center py-5">
-          <div className="spinner-border" role="status" />
-          <p className="text-secondary mt-3">Loading drivers...</p>
+          {/* Assign Existing Driver Card */}
+          <div className="col-md-6">
+            <div className="card h-100 border-0 shadow-sm">
+              <div className="card-body text-center p-5">
+                <div className="mb-4">
+                  <div
+                    className="d-inline-flex align-items-center justify-content-center rounded-circle"
+                    style={{ width: '80px', height: '80px', background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)' }}
+                  >
+                    <Icon icon="mdi:account-plus-outline" style={{ fontSize: '40px', color: '#fff' }} />
+                  </div>
+                </div>
+                <h4 className="mb-3">Assign Existing Driver</h4>
+                <p className="text-secondary mb-4">
+                  Assign a driver who already has an account in your organization to this school.
+                </p>
+                <button
+                  className="btn btn-outline-primary btn-lg radius-12 px-5"
+                  onClick={openAssign}
+                >
+                  <Icon icon="mingcute:user-add-line" className="me-2" />
+                  Assign Driver
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      ) : drivers.length === 0 && canInvite ? (
-        <div className="text-center py-5">
-          <Icon icon="mdi:account-off-outline" style={{ fontSize: '64px', color: '#9ca3af' }} />
-          <h5 className="mt-3 mb-2">No Drivers Yet</h5>
-          <p className="text-secondary mb-4">Get started by inviting your first driver to this school.</p>
-          <button className="btn btn-primary" onClick={openInvite}>
-            <Icon icon="mingcute:add-line" className="me-2" />
-            Invite Your First Driver
-          </button>
+      )}
+
+      {/* View Driver List Link */}
+      {canInvite && (
+        <div className="text-center mt-5">
+          <a href="/driver-list" className="btn btn-link text-secondary">
+            <Icon icon="mdi:account-group" className="me-2" />
+            View All Drivers
+          </a>
         </div>
-      ) : canInvite ? (
-        <div className="table-responsive">
-          <table className="table align-middle">
-            <thead>
-              <tr>
-                <th style={{ width: 36 }}></th>
-                <th>Name</th>
-                <th>Email</th>
-                <th>License #</th>
-                <th>Plate #</th>
-                <th>Status</th>
-                <th style={{ width: 160 }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {drivers.map((d) => {
-                const status = (d.status || "active").toLowerCase();
-                const badgeClass =
-                  status === "active" ? "bg-success" : "bg-secondary";
-                return (
-                  <tr key={d.id}>
-                    <td>
-                      <div className="avatar avatar-sm rounded-circle bg-light d-flex align-items-center justify-content-center">
-                        <Icon icon="mdi:steering" />
-                      </div>
-                    </td>
-                    <td>{d.displayName || "—"}</td>
-                    <td>{d.email || "—"}</td>
-                    <td>{d.driver_license_no || "—"}</td>
-                    <td>{d.plate_no || "—"}</td>
-                    <td>
-                      <span className={`badge ${badgeClass}`}>{status}</span>
-                    </td>
-                    <td>
-                      <div className="d-flex gap-2">
-                        <button
-                          className={`btn btn-sm ${
-                            status === "active"
-                              ? "btn-outline-secondary"
-                              : "btn-outline-success"
-                          }`}
-                          onClick={() => toggleDriverStatus(d)}
-                          title={
-                            status === "active"
-                              ? "Deactivate driver"
-                              : "Activate driver"
-                          }
-                        >
-                          {status === "active" ? (
-                            <>
-                              <Icon icon="mdi:pause-circle" /> Deactivate
-                            </>
-                          ) : (
-                            <>
-                              <Icon icon="mdi:play-circle" /> Activate
-                            </>
-                          )}
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => removeDriverFromSchool(d)}
-                          title="Remove from this school"
-                        >
-                          <Icon icon="mdi:delete" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+      )}
 
       {/* Invite Modal */}
       <Modal open={showInvite} title="Invite Driver" onClose={closeInvite}>
@@ -541,7 +399,7 @@ const InviteDriverLayer = () => {
           </div>
         </form>
 
-        {inviteLink ? (
+        {inviteLink && (
           <div className="mt-4">
             <label className="form-label">Invitation Link</label>
             <div className="d-flex gap-2">
@@ -560,7 +418,7 @@ const InviteDriverLayer = () => {
             </div>
             <small className="text-secondary">Link expires in 7 days.</small>
           </div>
-        ) : null}
+        )}
       </Modal>
 
       {/* Assign Existing Driver Modal */}
@@ -610,31 +468,6 @@ const InviteDriverLayer = () => {
             )}
           </div>
         )}
-      </Modal>
-
-      {/* Confirmation Modal */}
-      <Modal
-        open={confirmModal.open}
-        title={confirmModal.title}
-        onClose={() => setConfirmModal({ open: false, title: "", message: "", onConfirm: null })}
-      >
-        <p className="mb-4">{confirmModal.message}</p>
-        <div className="d-flex gap-2 justify-content-end">
-          <button
-            type="button"
-            className="btn btn-outline-secondary"
-            onClick={() => setConfirmModal({ open: false, title: "", message: "", onConfirm: null })}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            className="btn btn-danger"
-            onClick={confirmModal.onConfirm}
-          >
-            Confirm
-          </button>
-        </div>
       </Modal>
     </section>
   );

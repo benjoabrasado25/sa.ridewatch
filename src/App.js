@@ -19,6 +19,7 @@ import InviteSuccessPage from "./pages/InviteSuccessPage";
 import VerifyEmailPage from "./pages/VerifyEmailPage";
 
 import DriverRoutesPage from "./pages/DriverRoutesPage";
+import DriverListPage from "./pages/DriverListPage";
 import SchoolQRPage from "./pages/SchoolQRPage";
 import SchoolsPage from "./pages/SchoolsPage";
 
@@ -57,6 +58,7 @@ function App() {
           <Route path="/" element={secure(<HomePageOne />)} />
           <Route path="/schools" element={secure(<SchoolsPage />)} />
           <Route path="/invite-driver" element={secure(<InviteDriverPage />)} />
+          <Route path="/driver-list" element={secure(<DriverListPage />)} />
           <Route path="/routes" element={secure(<DriverRoutesPage />)} />
 
 

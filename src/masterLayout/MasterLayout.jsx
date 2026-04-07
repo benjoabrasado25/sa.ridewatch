@@ -153,8 +153,18 @@ const MasterLayout = ({ children }) => {
                 to='/invite-driver'
                 className={(navData) => (navData.isActive ? "active-page" : "")}
               >
-                <Icon icon='mdi:steering' className='menu-icon' />
-                <span>Drivers</span>
+                <Icon icon='mdi:email-plus-outline' className='menu-icon' />
+                <span>Invite Driver</span>
+              </NavLink>
+            </li>
+
+            <li>
+              <NavLink
+                to='/driver-list'
+                className={(navData) => (navData.isActive ? "active-page" : "")}
+              >
+                <Icon icon='mdi:account-group' className='menu-icon' />
+                <span>Driver List</span>
               </NavLink>
             </li>
 
