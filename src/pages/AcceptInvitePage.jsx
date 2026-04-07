@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
 import { db, auth } from '../lib/firebase';
 
 export default function AcceptInvitePage() {
@@ -116,7 +116,10 @@ export default function AcceptInvitePage() {
         acceptedAt: serverTimestamp(),
       });
 
-      // 4) Success → redirect to success page
+      // 4) Sign out the driver (they should use the driver app, not admin portal)
+      await signOut(auth);
+
+      // 5) Success → redirect to success page
       navigate('/invite-success', { replace: true });
     } catch (e) {
       setError(e?.message || 'Failed to accept invite.');
