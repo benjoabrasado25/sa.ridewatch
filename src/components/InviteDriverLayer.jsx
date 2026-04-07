@@ -178,6 +178,8 @@ const InviteDriverLayer = () => {
     setDrivers(null);
     setListError("");
 
+    console.log('Loading drivers for schoolId:', schoolId);
+
     // users where school_ids array contains current schoolId && account_type == driver
     const q = query(
       collection(db, "users"),
@@ -189,9 +191,11 @@ const InviteDriverLayer = () => {
       q,
       (snap) => {
         const rows = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+        console.log('Drivers found:', rows.length, rows);
         setDrivers(rows);
       },
       (err) => {
+        console.error('Error loading drivers:', err);
         setListError(err?.message || "Failed to load drivers.");
         setDrivers([]);
       }

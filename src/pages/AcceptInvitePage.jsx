@@ -45,7 +45,10 @@ export default function AcceptInvitePage() {
         if (!snap.exists()) {
           setLoadError('Invite not found.');
         } else {
-          setInvite(snap.data());
+          const inviteData = snap.data();
+          console.log('Loaded invite data:', inviteData);
+          console.log('Invite school_id:', inviteData.school_id);
+          setInvite(inviteData);
         }
       } catch (e) {
         setLoadError(e?.message || 'Unable to load invite (permissions?).');
@@ -88,26 +91,32 @@ export default function AcceptInvitePage() {
       //    ✅ Ensure user is ACTIVATED on creation
       //    ✅ Use school_ids array to support multiple schools
       //    ✅ Mark email as verified (they came from email invitation)
-      await setDoc(
-        doc(db, 'users', user.uid),
-        {
-          uid: user.uid,
-          email: String(invite.email || '').toLowerCase().trim(),
-          account_type: 'driver',
-          status: 'active',                   // <— activate here
-          school_ids: invite.school_id ? [invite.school_id] : [], // Array of schools
-          displayName: fullName.trim(),
-          phone: phone.trim(),
-          driver_license_no: licenseNo.trim(),
-          plate_no: plateNo.trim(),
-          emailVerified: true,                // <— Already verified via email invitation
-          verificationToken: null,            // <— Clear any verification token
-          verificationTokenExpiry: null,      // <— Clear expiry
-          createdAt: serverTimestamp(),       // safe to set; server will keep earliest
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+      const schoolIdsArray = invite.school_id ? [invite.school_id] : [];
+      console.log('Creating driver with school_ids:', schoolIdsArray);
+      console.log('User UID:', user.uid);
+
+      const driverData = {
+        uid: user.uid,
+        email: String(invite.email || '').toLowerCase().trim(),
+        account_type: 'driver',
+        status: 'active',
+        school_ids: schoolIdsArray,
+        displayName: fullName.trim(),
+        phone: phone.trim(),
+        driver_license_no: licenseNo.trim(),
+        plate_no: plateNo.trim(),
+        emailVerified: true,
+        verificationToken: null,
+        verificationTokenExpiry: null,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      };
+
+      console.log('Driver data to save:', driverData);
+
+      await setDoc(doc(db, 'users', user.uid), driverData, { merge: true });
+
+      console.log('Driver document saved successfully');
 
       // 3) Mark invite as accepted
       await updateDoc(doc(db, 'invites', token), {
