@@ -68,8 +68,8 @@ service cloud.firestore {
 
     // ===== SCHOOLS =====
     match /schools/{schoolId} {
-      // Anyone signed in can read schools (needed for validation in RequireSchool)
-      allow read: if signedIn();
+      // Anyone can read schools (needed for public QR code page and validation)
+      allow read: if true;
 
       // Only users with a company can create schools
       allow create: if signedIn()

@@ -1,6 +1,6 @@
 // /src/pages/AcceptInvitePage.jsx
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { db, auth } from '../lib/firebase';
@@ -135,7 +135,7 @@ export default function AcceptInvitePage() {
           <div className="alert alert-danger">
             {loadError || 'Invalid invitation.'}
           </div>
-          <Link to="/sign-in" className="btn btn-primary mt-3">Go to Sign In</Link>
+          <p className="text-muted mt-3">If you already have an account, please use the RideWatch Driver app to sign in.</p>
         </div>
       </section>
     );
@@ -153,7 +153,7 @@ export default function AcceptInvitePage() {
             <div className="alert alert-warning">
               {isExpired ? 'This invite has expired.' : 'This invite is no longer valid.'}
             </div>
-            <Link to="/sign-in" className="btn btn-primary mt-3">Go to Sign In</Link>
+            <p className="text-muted mt-3">If you already have an account, please use the RideWatch Driver app to sign in.</p>
           </>
         ) : (
           <form onSubmit={accept}>
