@@ -45,36 +45,50 @@ export default function InviteSuccessPage() {
             Your driver account has been created successfully. Download the app to start your journey.
           </p>
 
-          {/* Download Button */}
-          <a
-            href="https://play.google.com/store/apps/details?id=com.riderwatch.trackerUser&hl=en"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-lg w-100 d-flex align-items-center justify-content-center gap-3 mb-3"
-            style={{
-              background: "#000",
-              color: "#fff",
-              borderRadius: "14px",
-              padding: "16px 24px",
-              fontSize: "16px",
-              fontWeight: "600",
-              transition: "transform 0.2s, box-shadow 0.2s",
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow = "0 8px 25px rgba(0,0,0,0.25)";
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow = "none";
-            }}
-          >
-            <Icon icon="mdi:google-play" style={{ fontSize: "28px" }} />
-            <div className="text-start">
-              <div style={{ fontSize: "11px", opacity: 0.8, fontWeight: "400" }}>GET IT ON</div>
-              <div style={{ fontSize: "18px", marginTop: "-2px" }}>Google Play</div>
-            </div>
-          </a>
+          {/* Download Buttons */}
+          <div className="d-flex flex-column gap-2">
+            <a
+              href="https://play.google.com/store/apps/details?id=com.riderwatch.trackerDriver&hl=en"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-lg w-100 d-flex align-items-center justify-content-center gap-3"
+              style={{
+                background: "#000",
+                color: "#fff",
+                borderRadius: "14px",
+                padding: "14px 24px",
+                fontSize: "16px",
+                fontWeight: "600",
+              }}
+            >
+              <Icon icon="mdi:google-play" style={{ fontSize: "28px" }} />
+              <div className="text-start">
+                <div style={{ fontSize: "11px", opacity: 0.8, fontWeight: "400" }}>GET IT ON</div>
+                <div style={{ fontSize: "18px", marginTop: "-2px" }}>Google Play</div>
+              </div>
+            </a>
+
+            <a
+              href="https://apps.apple.com/us/app/my-ridewatch-driver/id6755679971"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-lg w-100 d-flex align-items-center justify-content-center gap-3"
+              style={{
+                background: "#000",
+                color: "#fff",
+                borderRadius: "14px",
+                padding: "14px 24px",
+                fontSize: "16px",
+                fontWeight: "600",
+              }}
+            >
+              <Icon icon="mdi:apple" style={{ fontSize: "28px" }} />
+              <div className="text-start">
+                <div style={{ fontSize: "11px", opacity: 0.8, fontWeight: "400" }}>Download on the</div>
+                <div style={{ fontSize: "18px", marginTop: "-2px" }}>App Store</div>
+              </div>
+            </a>
+          </div>
 
           {/* Divider */}
           <div className="d-flex align-items-center my-4">

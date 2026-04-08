@@ -116,11 +116,11 @@ const MasterLayout = ({ children }) => {
         </button>
         <div>
           <Link to='/' className='sidebar-logo d-flex align-items-center gap-2'>
-            <Icon
-              icon='mdi:car-multiple'
-              style={{ fontSize: '32px', color: '#667eea' }}
+            <img
+              src='/assets/images/logo.png'
+              alt='RideWatch'
+              style={{ height: '40px', width: 'auto' }}
             />
-            <span className='fw-bold text-xl' style={{ color: '#667eea' }}>RideWatch</span>
           </Link>
         </div>
         <div className='sidebar-menu-area'>

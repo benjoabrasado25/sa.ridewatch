@@ -517,8 +517,13 @@ const SchoolQRPage = () => {
             size: A4 portrait;
             margin: 0.5in;
           }
+          /* Force colors to print */
+          * {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color-adjust: exact !important;
+          }
           html, body {
-            background: white !important;
             margin: 0 !important;
             padding: 0 !important;
           }
@@ -530,48 +535,55 @@ const SchoolQRPage = () => {
           .action-buttons {
             display: none !important;
           }
-          /* Hide the screen icon (gradient won't print) */
+          /* Show the screen icon WITH forced background printing */
           .school-icon-screen {
+            display: inline-flex !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          /* Hide the print icon since we're forcing colors now */
+          .school-icon-print {
             display: none !important;
           }
-          /* Show the print icon (uses border which DOES print) */
-          .school-icon-print {
-            display: flex !important;
-          }
-          /* Style the main container for print */
+          /* Style the main container for print - with background */
           .qr-page-container {
-            background: white !important;
-            padding: 0 !important;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            padding: 30px 20px !important;
             min-height: auto !important;
-            display: block !important;
+            display: flex !important;
             height: auto !important;
             overflow: visible !important;
           }
           /* Style the wrapper */
           .qr-page-wrapper {
-            max-width: 100% !important;
-            margin: 0 !important;
+            max-width: 500px !important;
+            margin: 0 auto !important;
           }
-          /* Style the card for print - clean border, no shadow */
+          /* Style the card for print */
           .qr-card {
-            box-shadow: none !important;
-            border: 2px solid #333 !important;
-            border-radius: 12px !important;
-            padding: 30px 25px !important;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important;
+            border: none !important;
+            border-radius: 20px !important;
+            padding: 35px 30px !important;
             page-break-inside: avoid !important;
+            background: white !important;
           }
           /* Header section */
           .header-section {
-            margin-bottom: 20px !important;
+            margin-bottom: 25px !important;
           }
           /* Title sizing for print */
           .qr-card h1 {
-            font-size: 26px !important;
+            font-size: 24px !important;
             margin-bottom: 8px !important;
             margin-top: 0 !important;
+            color: #2d3748 !important;
           }
           .qr-card p {
-            font-size: 13px !important;
+            font-size: 12px !important;
             margin-bottom: 8px !important;
             margin-top: 0 !important;
           }
@@ -581,19 +593,19 @@ const SchoolQRPage = () => {
           }
           /* QR code size for print */
           #school-qr-code {
-            width: 180px !important;
-            height: 180px !important;
+            width: 160px !important;
+            height: 160px !important;
           }
           /* QR container */
           .qr-code-container {
             padding: 12px !important;
             margin-bottom: 8px !important;
             box-shadow: none !important;
-            border: 1px solid #ccc !important;
+            border: 1px solid #e2e8f0 !important;
           }
           /* QR instruction */
           .qr-instruction {
-            font-size: 12px !important;
+            font-size: 11px !important;
             margin-top: 8px !important;
           }
           /* Hide copy button in print */
@@ -605,30 +617,38 @@ const SchoolQRPage = () => {
             margin-bottom: 20px !important;
           }
           .school-id-section label {
-            font-size: 13px !important;
+            font-size: 12px !important;
             margin-bottom: 6px !important;
           }
           .qr-card input[readonly] {
             padding: 10px !important;
-            font-size: 12px !important;
+            font-size: 11px !important;
             border-radius: 6px !important;
+            background: #f7fafc !important;
+            -webkit-print-color-adjust: exact !important;
           }
           /* Footer */
           .footer-section {
             padding-top: 15px !important;
             margin-top: 0 !important;
-            border-top: 1px solid #ccc !important;
+            border-top: 1px solid #e2e8f0 !important;
           }
           .footer-section span {
-            font-size: 14px !important;
+            font-size: 13px !important;
+          }
+          /* Force footer icon color */
+          .footer-section svg {
+            color: #667eea !important;
           }
           /* Description box */
           .description-box {
             padding: 12px 15px !important;
             margin-bottom: 20px !important;
+            background: #f7fafc !important;
+            -webkit-print-color-adjust: exact !important;
           }
           .description-box p {
-            font-size: 12px !important;
+            font-size: 11px !important;
             line-height: 1.5 !important;
           }
         }

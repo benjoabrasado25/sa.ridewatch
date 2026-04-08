@@ -179,9 +179,9 @@ const SignUpLayer = () => {
 
             {!verificationStep ? (
             <form id='sign-up-form' onSubmit={handleSubmit}>
-              {/* Username Input */}
+              {/* Full Name Input */}
               <div className='mb-3'>
-                <label className='form-label fw-semibold' style={{ color: '#4a5568' }}>Username</label>
+                <label className='form-label fw-semibold' style={{ color: '#4a5568' }}>Full Name</label>
                 <div className='position-relative'>
                   <span className='position-absolute top-50 translate-middle-y ms-3' style={{ zIndex: 10 }}>
                     <Icon icon='f7:person' style={{ fontSize: '20px', color: '#9ca3af' }} />
@@ -189,7 +189,7 @@ const SignUpLayer = () => {
                   <input
                     type='text'
                     className='form-control ps-5 py-3'
-                    placeholder='Enter your username'
+                    placeholder='Enter your full name'
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
                     required
