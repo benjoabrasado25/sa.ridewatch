@@ -85,8 +85,22 @@ export function AuthProvider({ children }) {
       });
       setProfile((await getDoc(ref)).data());
     } else {
-      // Existing user - check email verification
+      // Existing user - check account type and email verification
       const profileData = snap.data();
+      const accountType = profileData.account_type || 'user';
+
+      // Block drivers and regular users from admin dashboard
+      if (accountType === 'driver') {
+        await auth.signOut();
+        setProfile(null);
+        throw new Error('Driver accounts cannot access the admin dashboard. Please use the Ride Watch Driver app.');
+      }
+
+      if (accountType === 'user') {
+        await auth.signOut();
+        setProfile(null);
+        throw new Error('User accounts cannot access the admin dashboard. Please use the Ride Watch app.');
+      }
 
       // Block unverified users (except drivers who verified via email invitation)
       if (profileData.emailVerified === false) {

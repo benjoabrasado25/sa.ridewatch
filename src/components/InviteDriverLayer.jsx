@@ -184,16 +184,35 @@ const InviteDriverLayer = () => {
       const existingSnap = await getDocs(existingQuery);
 
       if (!existingSnap.empty) {
-        const existingUser = existingSnap.docs[0].data();
+        const existingUserDoc = existingSnap.docs[0];
+        const existingUser = existingUserDoc.data();
         const accountType = existingUser.account_type || "user";
 
         if (accountType === "driver") {
-          setInviteError("This email is already registered as a driver. Use 'Assign Existing Driver' instead.");
+          // Auto-assign the driver to this school
+          const driverSchools = existingUser.school_ids || [];
+          if (driverSchools.includes(schoolId)) {
+            setInviteError("This driver is already assigned to this school.");
+            setBusyInvite(false);
+            return;
+          }
+
+          // Add school to driver's school_ids
+          const updatedSchools = [...driverSchools, schoolId];
+          await updateDoc(doc(db, "users", existingUserDoc.id), {
+            school_ids: updatedSchools,
+            updatedAt: serverTimestamp(),
+          });
+
+          toast.success("Driver already registered. They have been assigned to this school.");
+          setInviteEmail("");
+          setBusyInvite(false);
+          return;
         } else {
           setInviteError(`This email is already registered as a ${accountType.replace("_", " ")}. Cannot invite as driver.`);
+          setBusyInvite(false);
+          return;
         }
-        setBusyInvite(false);
-        return;
       }
 
       const token = createToken();

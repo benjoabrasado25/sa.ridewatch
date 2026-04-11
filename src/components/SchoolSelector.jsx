@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Icon } from "@iconify/react";
 import { useAuth } from "../auth/AuthProvider";
 import { db } from "../lib/firebase";
@@ -44,8 +44,8 @@ const SchoolSelector = () => {
 
   const currentSchool = schools.find((s) => s.id === currentSchoolId);
 
-  async function changeSchool(schoolId) {
-    if (!user || schoolId === currentSchoolId) return;
+  const changeSchool = useCallback(async (schoolId) => {
+    if (!user || schoolId === currentSchoolId || changing) return;
 
     try {
       setChanging(true);
@@ -55,14 +55,28 @@ const SchoolSelector = () => {
         { merge: true }
       );
       await refreshProfile();
-      toast.success("School changed successfully.");
+      // Only show toast for manual changes, not auto-select
     } catch (err) {
       console.error("Failed to change school:", err);
       toast.error("Failed to change school. Please try again.");
     } finally {
       setChanging(false);
     }
-  }
+  }, [user, currentSchoolId, changing, refreshProfile, toast]);
+
+  // Auto-select first school if none selected
+  useEffect(() => {
+    if (!user || loading || schools.length === 0 || changing) return;
+
+    // If no current school selected, auto-select the first one
+    if (!currentSchoolId) {
+      changeSchool(schools[0].id);
+    }
+    // If current school not in list (deleted?), select first
+    else if (!schools.find(s => s.id === currentSchoolId)) {
+      changeSchool(schools[0].id);
+    }
+  }, [schools, currentSchoolId, user, loading, changing, changeSchool]);
 
   if (loading) {
     return (
@@ -125,7 +139,10 @@ const SchoolSelector = () => {
                 className={`dropdown-item d-flex align-items-center justify-content-between ${
                   school.id === currentSchoolId ? "active" : ""
                 }`}
-                onClick={() => changeSchool(school.id)}
+                onClick={() => {
+                  changeSchool(school.id);
+                  toast.success("School changed successfully.");
+                }}
                 type="button"
               >
                 <span>{school.name}</span>
