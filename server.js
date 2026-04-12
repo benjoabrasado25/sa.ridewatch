@@ -311,9 +311,14 @@ app.post('/api/send-password-reset', async (req, res) => {
 
   try {
     // Generate password reset link using Firebase Admin
-    const resetLink = await admin.auth().generatePasswordResetLink(email.toLowerCase().trim(), {
-      url: 'https://app.ridewatch.org/sign-in', // Redirect after reset
-    });
+    const actionCodeSettings = {
+      url: 'https://app.ridewatch.org/sign-in',
+      handleCodeInApp: false,
+    };
+
+    console.log('Generating password reset link for:', email.toLowerCase().trim());
+    const resetLink = await admin.auth().generatePasswordResetLink(email.toLowerCase().trim(), actionCodeSettings);
+    console.log('Reset link generated successfully');
 
     // Resend configuration
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
@@ -379,7 +384,7 @@ app.post('/api/send-password-reset', async (req, res) => {
 
     return res.status(200).json({ success: true, message: 'Password reset email sent', id: data.id });
   } catch (error) {
-    console.error('Error sending password reset email:', error);
+    console.error('Error sending password reset email:', error.code, error.message);
 
     // Handle Firebase errors
     if (error.code === 'auth/user-not-found') {
@@ -387,7 +392,11 @@ app.post('/api/send-password-reset', async (req, res) => {
       return res.status(200).json({ success: true, message: 'If an account exists, a reset email has been sent' });
     }
 
-    return res.status(500).json({ error: 'Failed to send password reset email' });
+    if (error.code === 'auth/invalid-continue-uri') {
+      console.error('Invalid continue URI - check actionCodeSettings');
+    }
+
+    return res.status(500).json({ error: 'Failed to send password reset email: ' + error.message });
   }
 });
 
