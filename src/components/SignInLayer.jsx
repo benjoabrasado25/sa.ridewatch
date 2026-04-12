@@ -185,19 +185,8 @@ const SignInLayer = () => {
                 </div>
               </div>
 
-              {/* Remember & Forgot Password */}
-              <div className='d-flex justify-content-between align-items-center mb-4'>
-                <div className='form-check'>
-                  <input
-                    className='form-check-input'
-                    type='checkbox'
-                    id='remeber'
-                    style={{ cursor: 'pointer' }}
-                  />
-                  <label className='form-check-label' htmlFor='remeber' style={{ cursor: 'pointer', fontSize: '14px' }}>
-                    Remember me
-                  </label>
-                </div>
+              {/* Forgot Password */}
+              <div className='d-flex justify-content-end mb-4'>
                 <Link
                   to='/forgot-password'
                   className='text-decoration-none fw-semibold'
