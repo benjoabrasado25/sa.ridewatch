@@ -54,9 +54,22 @@ export function AuthProvider({ children }) {
       return;
     }
     const ref = doc(db, "users", u.uid);
+
+    // Wait a moment for any concurrent writes (e.g., from AcceptInvitePage) to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     const snap = await getDoc(ref);
     if (!snap.exists()) {
-      // New user - create user doc and auto-create company
+      // Check if this user is on the accept-invite page (driver registration)
+      // If so, don't auto-create - let AcceptInvitePage handle it
+      const isAcceptingInvite = window.location.pathname.includes('accept-invite');
+      if (isAcceptingInvite) {
+        console.log('User is accepting invite, skipping auto-creation of bus_company profile');
+        setProfile(null);
+        return;
+      }
+
+      // New user (not from invite) - create user doc and auto-create company
       const companyName = u.displayName ? `${u.displayName}'s Bus Company` : "My Bus Company";
 
       // 1) Create company

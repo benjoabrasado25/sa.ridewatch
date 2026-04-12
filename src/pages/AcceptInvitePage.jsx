@@ -87,7 +87,7 @@ export default function AcceptInvitePage() {
       await updateProfile(cred.user, { displayName: fullName.trim() });
       const user = cred.user;
 
-      // 2) Merge driver profile fields into users/{uid}
+      // 2) IMMEDIATELY create driver profile BEFORE auth state listener can interfere
       //    ✅ Ensure user is ACTIVATED on creation
       //    ✅ Use school_ids array to support multiple schools
       //    ✅ Mark email as verified (they came from email invitation)
@@ -114,7 +114,8 @@ export default function AcceptInvitePage() {
 
       console.log('Driver data to save:', driverData);
 
-      await setDoc(doc(db, 'users', user.uid), driverData, { merge: true });
+      // Use set WITHOUT merge to ensure we fully control the document (not merge with bus_company)
+      await setDoc(doc(db, 'users', user.uid), driverData);
 
       console.log('Driver document saved successfully');
 
