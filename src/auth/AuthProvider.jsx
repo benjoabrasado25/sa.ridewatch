@@ -122,7 +122,10 @@ export function AuthProvider({ children }) {
         throw new Error('Please verify your email address before signing in. Check your inbox for the verification link.');
       }
 
-      if (!profileData.company_id) {
+      // Skip company creation for super_admin users
+      if (profileData.role === 'super_admin') {
+        setProfile(profileData);
+      } else if (!profileData.company_id) {
         // User exists but has no company - create one
         const companyName = u.displayName ? `${u.displayName}'s Bus Company` : "My Bus Company";
 

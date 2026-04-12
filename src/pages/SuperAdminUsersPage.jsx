@@ -4,8 +4,10 @@ import { Icon } from '@iconify/react/dist/iconify.js';
 import { collection, query, getDocs, orderBy, limit, startAfter } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import MasterLayout from '../masterLayout/MasterLayout';
+import { useAuth } from '../auth/AuthProvider';
 
 export default function SuperAdminUsersPage() {
+  const { loading: authLoading } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -146,6 +148,17 @@ export default function SuperAdminUsersPage() {
       hour: '2-digit',
       minute: '2-digit'
     });
+  }
+
+  // Show loading while auth is loading
+  if (authLoading) {
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
   }
 
   return (

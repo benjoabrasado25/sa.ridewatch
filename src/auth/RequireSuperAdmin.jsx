@@ -10,9 +10,15 @@ import { useAuth } from './AuthProvider';
 export default function RequireSuperAdmin({ children }) {
   const { profile, loading } = useAuth();
 
-  // Still loading
+  // Still loading - show spinner
   if (loading) {
-    return null;
+    return (
+      <div className="d-flex justify-content-center align-items-center min-vh-100">
+        <div className="spinner-border text-primary" role="status">
+          <span className="visually-hidden">Loading...</span>
+        </div>
+      </div>
+    );
   }
 
   // Check for super_admin role
