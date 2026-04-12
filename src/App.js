@@ -25,6 +25,9 @@ import SchoolQRPage from "./pages/SchoolQRPage";
 import SchoolsPage from "./pages/SchoolsPage";
 import SuperAdminUsersPage from "./pages/SuperAdminUsersPage";
 import SuperAdminSubscriptionsPage from "./pages/SuperAdminSubscriptionsPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPage from "./pages/PrivacyPage";
 
 
 
@@ -62,7 +65,9 @@ function App() {
           <Route path="/school/:schoolId" element={<SchoolQRPage />} />
 
           
-          {/* <Route path="/forgot-password" element={<ForgotPasswordPage />} /> */}
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
 
           {/* ===== PROTECTED ROOT (login + school required) ===== */}
           <Route path="/" element={secure(<HomePageOne />)} />

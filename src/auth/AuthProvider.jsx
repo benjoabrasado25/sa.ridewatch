@@ -6,6 +6,7 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   updateProfile,
+  sendPasswordResetEmail,
 } from "firebase/auth";
 
 // ⬇⬇⬇ use RELATIVE import ⬇⬇⬇
@@ -268,6 +269,7 @@ export function AuthProvider({ children }) {
       return cred.user;
     },
     logout: () => signOut(auth),
+    resetPassword: (email) => sendPasswordResetEmail(auth, email),
   }), [user, profile, loading, refreshProfile]);
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;
