@@ -6,7 +6,6 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   updateProfile,
-  sendPasswordResetEmail,
 } from "firebase/auth";
 
 // ⬇⬇⬇ use RELATIVE import ⬇⬇⬇
@@ -269,7 +268,23 @@ export function AuthProvider({ children }) {
       return cred.user;
     },
     logout: () => signOut(auth),
-    resetPassword: (email) => sendPasswordResetEmail(auth, email),
+    resetPassword: async (email) => {
+      const apiUrl = process.env.REACT_APP_EMAIL_API_URL || 'https://app.ridewatch.org/api';
+      const response = await fetch(`${apiUrl}/send-password-reset`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to send password reset email');
+      }
+
+      return response.json();
+    },
   }), [user, profile, loading, refreshProfile]);
 
   return <AuthCtx.Provider value={value}>{children}</AuthCtx.Provider>;

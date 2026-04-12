@@ -294,6 +294,103 @@ app.post('/api/send-driver-invitation', async (req, res) => {
   }
 });
 
+// Password reset endpoint - sends branded email via Resend
+app.post('/api/send-password-reset', async (req, res) => {
+  const { email } = req.body;
+
+  // Validate required fields
+  if (!email) {
+    return res.status(400).json({ error: 'Email is required' });
+  }
+
+  // Validate email format
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email address' });
+  }
+
+  try {
+    // Generate password reset link using Firebase Admin
+    const resetLink = await admin.auth().generatePasswordResetLink(email.toLowerCase().trim(), {
+      url: 'https://app.ridewatch.org/sign-in', // Redirect after reset
+    });
+
+    // Resend configuration
+    const RESEND_API_KEY = process.env.RESEND_API_KEY;
+    const FROM_EMAIL = process.env.FROM_EMAIL || 'RideWatch <noreply@ridewatch.org>';
+
+    if (!RESEND_API_KEY) {
+      console.error('Resend API key not configured');
+      return res.status(500).json({ error: 'Email service not configured' });
+    }
+
+    const resend = new Resend(RESEND_API_KEY);
+
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 12px 12px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Reset Your Password</h1>
+        </div>
+        <div style="background: #ffffff; padding: 40px; border: 1px solid #e5e7eb; border-top: none;">
+          <p style="font-size: 16px; color: #374151; margin-bottom: 20px;">Hi there,</p>
+          <p style="font-size: 16px; color: #374151; margin-bottom: 30px;">
+            We received a request to reset the password for your RideWatch account. Click the button below to create a new password:
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${resetLink}"
+               style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 40px; text-decoration: none; border-radius: 10px; font-size: 16px; font-weight: bold; display: inline-block; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);">
+              Reset Password
+            </a>
+          </div>
+          <p style="font-size: 14px; color: #6b7280; margin-top: 30px; text-align: center;">
+            This link will expire in <strong>1 hour</strong> for security reasons.
+          </p>
+          <div style="margin-top: 30px; padding: 20px; background: #f9fafb; border-radius: 8px;">
+            <p style="font-size: 14px; color: #6b7280; margin: 0;">
+              If the button doesn't work, copy and paste this link into your browser:
+            </p>
+            <p style="font-size: 12px; color: #667eea; word-break: break-all; margin-top: 10px;">
+              ${resetLink}
+            </p>
+          </div>
+          <p style="font-size: 14px; color: #6b7280; margin-top: 30px; padding-top: 30px; border-top: 1px solid #e5e7eb;">
+            If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
+          </p>
+        </div>
+        <div style="background: #f9fafb; padding: 20px; text-align: center; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 12px 12px;">
+          <p style="font-size: 12px; color: #6b7280; margin: 0;">
+            © ${new Date().getFullYear()} RideWatch. All rights reserved.
+          </p>
+        </div>
+      </div>
+    `;
+
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: [email.trim()],
+      subject: 'Reset Your RideWatch Password',
+      html: htmlContent,
+    });
+
+    if (error) {
+      console.error('Resend error:', error);
+      return res.status(500).json({ error: 'Failed to send password reset email' });
+    }
+
+    return res.status(200).json({ success: true, message: 'Password reset email sent', id: data.id });
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+
+    // Handle Firebase errors
+    if (error.code === 'auth/user-not-found') {
+      // For security, don't reveal if user exists or not
+      return res.status(200).json({ success: true, message: 'If an account exists, a reset email has been sent' });
+    }
+
+    return res.status(500).json({ error: 'Failed to send password reset email' });
+  }
+});
+
 // Contact form endpoint (for marketing site)
 app.post('/api/send-contact-email', async (req, res) => {
   const { name, email, phone, subject, message } = req.body;
