@@ -176,7 +176,23 @@ const MasterLayout = ({ children }) => {
                 <Icon icon='mdi:bus-school' className='menu-icon' />
                 <span>Driver Routes</span>
               </NavLink>
-            </li>                      
+            </li>
+
+            {/* Super Admin Menu - Only visible to super_admin users */}
+            {profile?.role === 'super_admin' && (
+              <>
+                <li className="sidebar-menu-group-title mt-4">Super Admin</li>
+                <li>
+                  <NavLink
+                    to='/admin/users'
+                    className={(navData) => (navData.isActive ? "active-page" : "")}
+                  >
+                    <Icon icon='mdi:shield-account' className='menu-icon' />
+                    <span>User Management</span>
+                  </NavLink>
+                </li>
+              </>
+            )}
           </ul>
         </div>
       </aside>

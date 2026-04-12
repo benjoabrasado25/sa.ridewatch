@@ -6,6 +6,7 @@ import RouteScrollToTop from "./helper/RouteScrollToTop";
 import { AuthProvider } from "./auth/AuthProvider.jsx";
 import RequireAuth from "./auth/RequireAuth.jsx";
 import RequireSchool from "./auth/RequireSchool.jsx";
+import RequireSuperAdmin from "./auth/RequireSuperAdmin.jsx";
 import { ToastProvider } from "./components/Toast.jsx";
 
 // === Pages ===
@@ -22,6 +23,7 @@ import DriverRoutesPage from "./pages/DriverRoutesPage";
 import DriverListPage from "./pages/DriverListPage";
 import SchoolQRPage from "./pages/SchoolQRPage";
 import SchoolsPage from "./pages/SchoolsPage";
+import SuperAdminUsersPage from "./pages/SuperAdminUsersPage";
 
 
 
@@ -33,6 +35,13 @@ import SchoolsPage from "./pages/SchoolsPage";
 const secure = (el) => (
   <RequireAuth>
     <RequireSchool>{el}</RequireSchool>
+  </RequireAuth>
+);
+
+// Helper to wrap super admin only routes
+const superAdminOnly = (el) => (
+  <RequireAuth>
+    <RequireSuperAdmin>{el}</RequireSuperAdmin>
   </RequireAuth>
 );
 
@@ -61,6 +70,8 @@ function App() {
           <Route path="/driver-list" element={secure(<DriverListPage />)} />
           <Route path="/routes" element={secure(<DriverRoutesPage />)} />
 
+          {/* ===== SUPER ADMIN ONLY ===== */}
+          <Route path="/admin/users" element={superAdminOnly(<SuperAdminUsersPage />)} />
 
           {/* Create Company route - redirect to home since companies are auto-created */}
           <Route path="/create-company" element={<Navigate to="/" replace />} />
