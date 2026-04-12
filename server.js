@@ -312,13 +312,18 @@ app.post('/api/send-password-reset', async (req, res) => {
   try {
     // Generate password reset link using Firebase Admin
     const actionCodeSettings = {
-      url: 'https://app.ridewatch.org/sign-in',
-      handleCodeInApp: false,
+      url: 'https://app.ridewatch.org/reset-password',
+      handleCodeInApp: true,
     };
 
     console.log('Generating password reset link for:', email.toLowerCase().trim());
-    const resetLink = await admin.auth().generatePasswordResetLink(email.toLowerCase().trim(), actionCodeSettings);
+    const firebaseResetLink = await admin.auth().generatePasswordResetLink(email.toLowerCase().trim(), actionCodeSettings);
     console.log('Reset link generated successfully');
+
+    // Extract the oobCode from Firebase link and create our custom link
+    const url = new URL(firebaseResetLink);
+    const oobCode = url.searchParams.get('oobCode');
+    const resetLink = `https://app.ridewatch.org/reset-password?oobCode=${oobCode}`;
 
     // Resend configuration
     const RESEND_API_KEY = process.env.RESEND_API_KEY;
