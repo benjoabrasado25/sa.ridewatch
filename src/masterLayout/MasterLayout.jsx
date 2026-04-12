@@ -138,6 +138,15 @@ const MasterLayout = ({ children }) => {
                     <span>User Management</span>
                   </NavLink>
                 </li>
+                <li>
+                  <NavLink
+                    to='/admin/subscriptions'
+                    className={(navData) => (navData.isActive ? "active-page" : "")}
+                  >
+                    <Icon icon='mdi:credit-card-check' className='menu-icon' />
+                    <span>Subscriptions</span>
+                  </NavLink>
+                </li>
               </>
             ) : (
               <>

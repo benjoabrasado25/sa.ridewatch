@@ -24,6 +24,7 @@ import DriverListPage from "./pages/DriverListPage";
 import SchoolQRPage from "./pages/SchoolQRPage";
 import SchoolsPage from "./pages/SchoolsPage";
 import SuperAdminUsersPage from "./pages/SuperAdminUsersPage";
+import SuperAdminSubscriptionsPage from "./pages/SuperAdminSubscriptionsPage";
 
 
 
@@ -72,6 +73,7 @@ function App() {
 
           {/* ===== SUPER ADMIN ONLY ===== */}
           <Route path="/admin/users" element={superAdminOnly(<SuperAdminUsersPage />)} />
+          <Route path="/admin/subscriptions" element={superAdminOnly(<SuperAdminSubscriptionsPage />)} />
 
           {/* Create Company route - redirect to home since companies are auto-created */}
           <Route path="/create-company" element={<Navigate to="/" replace />} />
