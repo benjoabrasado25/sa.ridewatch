@@ -26,9 +26,9 @@
     "datatables.net": "^2.1.8",
     "datatables.net-dt": "^2.1.8",
     "express": "^4.18.2",
+    "express-rate-limit": "^8.3.2",
     "firebase": "^12.2.1",
     "firebase-admin": "^11.11.0",
-    "stripe": "^14.10.0",
     "flatpickr": "^4.6.13",
     "highlight.js": "^11.10.0",
     "isotope-layout": "^3.0.6",
@@ -53,6 +53,7 @@
     "react-toastify": "^10.0.5",
     "resend": "^6.9.1",
     "slick-carousel": "^1.8.1",
+    "stripe": "^14.10.0",
     "uuid": "^10.0.0",
     "web-vitals": "^2.1.4",
     "wowjs": "^1.1.3"

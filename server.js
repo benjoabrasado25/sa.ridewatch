@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const { Resend } = require('resend');
 const Stripe = require('stripe');
 const admin = require('firebase-admin');
@@ -91,6 +92,40 @@ const corsOptions = {
 // Middleware
 app.use(cors(corsOptions));
 
+// ============================================
+// RATE LIMITING - Protect against bot attacks
+// ============================================
+
+// General API rate limit: 100 requests per 15 minutes per IP
+const generalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100,
+  message: { error: 'Too many requests, please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Strict rate limit for email endpoints: 5 requests per 15 minutes per IP
+const emailLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  message: { error: 'Too many email requests. Please wait 15 minutes before trying again.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Auth rate limit: 10 attempts per 15 minutes per IP (for password reset, etc.)
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  message: { error: 'Too many attempts. Please wait 15 minutes before trying again.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply general limiter to all API routes
+app.use('/api/', generalLimiter);
+
 // Special handling for Stripe webhook (needs raw body)
 app.use('/api/stripe-webhook', express.raw({ type: 'application/json' }));
 
@@ -108,8 +143,8 @@ function sanitizeHtml(str) {
     .replace(/'/g, '&#039;');
 }
 
-// Email verification endpoint
-app.post('/api/send-verification-email', async (req, res) => {
+// Email verification endpoint (strict rate limit)
+app.post('/api/send-verification-email', emailLimiter, async (req, res) => {
   const { email, displayName, verificationToken } = req.body;
 
   // Validate required fields
@@ -189,8 +224,8 @@ app.post('/api/send-verification-email', async (req, res) => {
   }
 });
 
-// Driver invitation endpoint
-app.post('/api/send-driver-invitation', async (req, res) => {
+// Driver invitation endpoint (strict rate limit)
+app.post('/api/send-driver-invitation', emailLimiter, async (req, res) => {
   const { email, schoolName, inviterName, invitationLink, expiresAt } = req.body;
 
   // Validate required fields
@@ -294,8 +329,8 @@ app.post('/api/send-driver-invitation', async (req, res) => {
   }
 });
 
-// Password reset endpoint - sends branded email via Resend
-app.post('/api/send-password-reset', async (req, res) => {
+// Password reset endpoint - sends branded email via Resend (auth rate limit)
+app.post('/api/send-password-reset', authLimiter, async (req, res) => {
   const { email } = req.body;
 
   // Validate required fields
@@ -405,8 +440,8 @@ app.post('/api/send-password-reset', async (req, res) => {
   }
 });
 
-// Contact form endpoint (for marketing site)
-app.post('/api/send-contact-email', async (req, res) => {
+// Contact form endpoint (for marketing site - strict rate limit)
+app.post('/api/send-contact-email', emailLimiter, async (req, res) => {
   const { name, email, phone, subject, message } = req.body;
 
   // Validate required fields
