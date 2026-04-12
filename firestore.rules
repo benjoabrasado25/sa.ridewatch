@@ -8,6 +8,13 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    // Check if user is super_admin
+    function isSuperAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin';
+    }
+
     // Check if the authenticated user owns a company
     function isCompanyOwner(companyId) {
       return signedIn()
@@ -55,6 +62,9 @@ service cloud.firestore {
       // Company owner can read any user document (needed for invite validation, driver management, user banning)
       allow read: if signedIn() && hasCompany();
 
+      // Super admin can read ALL user documents
+      allow read: if isSuperAdmin();
+
       // Company owner can update drivers if they share at least one school
       allow update: if signedIn()
         && hasCompany()
@@ -64,6 +74,10 @@ service cloud.firestore {
       allow update: if signedIn()
         && hasCompany()
         && resource.data.account_type == 'user';
+
+      // Super admin can delete any user EXCEPT other super_admins
+      allow delete: if isSuperAdmin()
+        && resource.data.role != 'super_admin';
     }
 
     // ===== SCHOOLS =====
