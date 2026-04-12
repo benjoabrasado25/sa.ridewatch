@@ -1,7 +1,7 @@
 // /src/pages/SuperAdminUsersPage.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { Icon } from '@iconify/react/dist/iconify.js';
-import { collection, query, getDocs, doc, deleteDoc, orderBy, limit, startAfter, where } from 'firebase/firestore';
+import { collection, query, getDocs, doc, deleteDoc, orderBy, limit, startAfter } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import MasterLayout from '../masterLayout/MasterLayout';
 
@@ -19,7 +19,7 @@ export default function SuperAdminUsersPage() {
   const PAGE_SIZE = 20;
 
   // Load users
-  async function loadUsers(reset = false) {
+  const loadUsers = useCallback(async (reset = false) => {
     setLoading(true);
     try {
       let q = query(
@@ -53,10 +53,11 @@ export default function SuperAdminUsersPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [lastDoc]);
 
   useEffect(() => {
     loadUsers(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Filter users based on search and type
