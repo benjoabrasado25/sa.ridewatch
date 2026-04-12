@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signOut, onAuthStateChanged } from 'firebase/auth';
 import { db, auth } from '../lib/firebase';
 
 export default function AcceptInvitePage() {
@@ -25,11 +25,24 @@ export default function AcceptInvitePage() {
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState('');
 
+  // Check if an admin is already logged in
+  const [loggedInUser, setLoggedInUser] = useState(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
   const isExpired = useMemo(() => {
     if (!invite?.expiresAt) return false;
     const exp = invite.expiresAt?.toDate ? invite.expiresAt.toDate() : new Date(invite.expiresAt);
     return Date.now() > exp.getTime();
   }, [invite]);
+
+  // Check for logged-in user on mount
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setLoggedInUser(user);
+      setCheckingAuth(false);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     let on = true;
@@ -59,6 +72,16 @@ export default function AcceptInvitePage() {
     load();
     return () => { on = false; };
   }, [token]);
+
+  // Handle logout for the logged-in admin
+  async function handleLogout() {
+    try {
+      await signOut(auth);
+      // loggedInUser will be set to null by onAuthStateChanged
+    } catch (e) {
+      setError('Failed to logout. Please try again.');
+    }
+  }
 
   function validate() {
     if (!invite) return 'Invalid invite.';
@@ -138,7 +161,41 @@ export default function AcceptInvitePage() {
     }
   }
 
-  if (loading) return null;
+  if (loading || checkingAuth) return null;
+
+  // Show warning if an admin is already logged in
+  if (loggedInUser) {
+    return (
+      <section className="container py-5">
+        <div className="max-w-600 mx-auto">
+          <h3 className="mb-3">Accept Invitation</h3>
+          <div className="alert alert-warning">
+            <strong>Warning:</strong> You are currently logged in as <strong>{loggedInUser.email}</strong>.
+            <br /><br />
+            To accept this driver invitation, you must first log out of your current account.
+            This prevents conflicts between your admin account and the new driver account.
+          </div>
+          <div className="d-flex gap-3 mt-4">
+            <button
+              className="btn btn-primary radius-12 py-3 flex-grow-1"
+              onClick={handleLogout}
+            >
+              Logout and Continue
+            </button>
+            <button
+              className="btn btn-outline-secondary radius-12 py-3 flex-grow-1"
+              onClick={() => navigate('/dashboard')}
+            >
+              Go Back to Dashboard
+            </button>
+          </div>
+          <p className="text-muted mt-4 text-center">
+            <small>Tip: You can also open this invitation link in an incognito/private browser window.</small>
+          </p>
+        </div>
+      </section>
+    );
+  }
 
   if (!invite) {
     return (
