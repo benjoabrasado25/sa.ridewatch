@@ -1,8 +1,8 @@
 // /src/pages/SuperAdminUsersPage.jsx
 import React, { useEffect, useState, useCallback } from 'react';
 import { Icon } from '@iconify/react/dist/iconify.js';
-import { collection, query, getDocs, doc, deleteDoc, orderBy, limit, startAfter } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, getDocs, orderBy, limit, startAfter } from 'firebase/firestore';
+import { db, auth } from '../lib/firebase';
 import MasterLayout from '../masterLayout/MasterLayout';
 
 export default function SuperAdminUsersPage() {
@@ -77,14 +77,34 @@ export default function SuperAdminUsersPage() {
     setShowDeleteModal(true);
   }
 
-  // Delete user
+  // Delete user (from both Firebase Auth and Firestore)
   async function handleDelete() {
     if (!userToDelete) return;
 
     setDeleting(userToDelete.id);
     try {
-      // Delete from Firestore
-      await deleteDoc(doc(db, 'users', userToDelete.id));
+      // Get current user's ID token for authorization
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        throw new Error('Not authenticated');
+      }
+      const token = await currentUser.getIdToken();
+
+      // Call API to delete user from both Auth and Firestore
+      const apiUrl = process.env.REACT_APP_API_URL || '';
+      const response = await fetch(`${apiUrl}/api/admin/users/${userToDelete.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to delete user');
+      }
 
       // Remove from local state
       setUsers(prev => prev.filter(u => u.id !== userToDelete.id));
@@ -374,11 +394,10 @@ export default function SuperAdminUsersPage() {
                   <p className="mb-1"><strong>Email:</strong> {userToDelete?.email || '-'}</p>
                   <p className="mb-0"><strong>Type:</strong> {userToDelete?.account_type || '-'}</p>
                 </div>
-                <div className="alert alert-warning mt-3 mb-0">
+                <div className="alert alert-danger mt-3 mb-0">
                   <Icon icon="mdi:warning" className="me-2" />
-                  <strong>Warning:</strong> This will only delete the user document from Firestore.
-                  The Firebase Authentication account will remain. To fully delete, also remove from
-                  Firebase Authentication console.
+                  <strong>Warning:</strong> This action is permanent and cannot be undone.
+                  The user will be deleted from both Firebase Authentication and Firestore.
                 </div>
               </div>
               <div className="modal-footer">

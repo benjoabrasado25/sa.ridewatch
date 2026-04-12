@@ -694,6 +694,75 @@ app.post('/api/reactivate-subscription', async (req, res) => {
 });
 
 // ============================================
+// SUPER ADMIN ENDPOINTS
+// ============================================
+
+// Middleware to verify super admin
+async function verifySuperAdmin(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).json({ error: 'Unauthorized: No token provided' });
+  }
+
+  const token = authHeader.split('Bearer ')[1];
+
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(token);
+    const userDoc = await admin.firestore().collection('users').doc(decodedToken.uid).get();
+
+    if (!userDoc.exists || userDoc.data()?.role !== 'super_admin') {
+      return res.status(403).json({ error: 'Forbidden: Super admin access required' });
+    }
+
+    req.callerUid = decodedToken.uid;
+    next();
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  }
+}
+
+// Delete user (both Auth and Firestore)
+app.delete('/api/admin/users/:uid', verifySuperAdmin, async (req, res) => {
+  const { uid } = req.params;
+
+  if (!uid) {
+    return res.status(400).json({ error: 'Missing user uid' });
+  }
+
+  try {
+    const db = admin.firestore();
+
+    // Check if target user is super_admin (prevent deleting other super admins)
+    const targetUserDoc = await db.collection('users').doc(uid).get();
+    if (targetUserDoc.exists && targetUserDoc.data()?.role === 'super_admin') {
+      return res.status(403).json({ error: 'Cannot delete super admin accounts' });
+    }
+
+    // Delete from Firebase Authentication
+    try {
+      await admin.auth().deleteUser(uid);
+      console.log(`Deleted user from Firebase Auth: ${uid}`);
+    } catch (authError) {
+      // User might not exist in Auth (e.g., already deleted)
+      if (authError.code !== 'auth/user-not-found') {
+        throw authError;
+      }
+      console.log(`User not found in Firebase Auth: ${uid}`);
+    }
+
+    // Delete from Firestore
+    await db.collection('users').doc(uid).delete();
+    console.log(`Deleted user from Firestore: ${uid}`);
+
+    return res.status(200).json({ success: true, message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================
 // STATIC FILES
 // ============================================
 

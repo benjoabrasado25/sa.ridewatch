@@ -125,63 +125,10 @@ const MasterLayout = ({ children }) => {
         </div>
         <div className='sidebar-menu-area'>
           <ul className='sidebar-menu' id='sidebar-menu'>
-            <li>
-              <NavLink
-                to='/'
-                className={(navData) => (navData.isActive ? "active-page" : "")}
-              >
-                <Icon
-                  icon='solar:home-smile-angle-outline'
-                  className='menu-icon'
-                />
-                <span>Dashboard</span>
-              </NavLink>
-            </li>
-
-            <li>
-              <NavLink
-                to='/schools'
-                className={(navData) => (navData.isActive ? "active-page" : "")}
-              >
-                <Icon icon='mdi:school-outline' className='menu-icon' />
-                <span>Schools</span>
-              </NavLink>
-            </li>
-
-            <li>
-              <NavLink
-                to='/invite-driver'
-                className={(navData) => (navData.isActive ? "active-page" : "")}
-              >
-                <Icon icon='mdi:email-plus-outline' className='menu-icon' />
-                <span>Invite Driver</span>
-              </NavLink>
-            </li>
-
-            <li>
-              <NavLink
-                to='/driver-list'
-                className={(navData) => (navData.isActive ? "active-page" : "")}
-              >
-                <Icon icon='mdi:account-group' className='menu-icon' />
-                <span>Driver List</span>
-              </NavLink>
-            </li>
-
-            <li>
-              <NavLink
-                to='/routes'
-                className={(navData) => (navData.isActive ? "active-page" : "")}
-              >
-                <Icon icon='mdi:bus-school' className='menu-icon' />
-                <span>Driver Routes</span>
-              </NavLink>
-            </li>
-
             {/* Super Admin Menu - Only visible to super_admin users */}
-            {profile?.role === 'super_admin' && (
+            {profile?.role === 'super_admin' ? (
               <>
-                <li className="sidebar-menu-group-title mt-4">Super Admin</li>
+                <li className="sidebar-menu-group-title">Super Admin</li>
                 <li>
                   <NavLink
                     to='/admin/users'
@@ -189,6 +136,61 @@ const MasterLayout = ({ children }) => {
                   >
                     <Icon icon='mdi:shield-account' className='menu-icon' />
                     <span>User Management</span>
+                  </NavLink>
+                </li>
+              </>
+            ) : (
+              <>
+                <li>
+                  <NavLink
+                    to='/'
+                    className={(navData) => (navData.isActive ? "active-page" : "")}
+                  >
+                    <Icon
+                      icon='solar:home-smile-angle-outline'
+                      className='menu-icon'
+                    />
+                    <span>Dashboard</span>
+                  </NavLink>
+                </li>
+
+                <li>
+                  <NavLink
+                    to='/schools'
+                    className={(navData) => (navData.isActive ? "active-page" : "")}
+                  >
+                    <Icon icon='mdi:school-outline' className='menu-icon' />
+                    <span>Schools</span>
+                  </NavLink>
+                </li>
+
+                <li>
+                  <NavLink
+                    to='/invite-driver'
+                    className={(navData) => (navData.isActive ? "active-page" : "")}
+                  >
+                    <Icon icon='mdi:email-plus-outline' className='menu-icon' />
+                    <span>Invite Driver</span>
+                  </NavLink>
+                </li>
+
+                <li>
+                  <NavLink
+                    to='/driver-list'
+                    className={(navData) => (navData.isActive ? "active-page" : "")}
+                  >
+                    <Icon icon='mdi:account-group' className='menu-icon' />
+                    <span>Driver List</span>
+                  </NavLink>
+                </li>
+
+                <li>
+                  <NavLink
+                    to='/routes'
+                    className={(navData) => (navData.isActive ? "active-page" : "")}
+                  >
+                    <Icon icon='mdi:bus-school' className='menu-icon' />
+                    <span>Driver Routes</span>
                   </NavLink>
                 </li>
               </>
