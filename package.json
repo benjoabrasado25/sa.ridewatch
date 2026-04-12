@@ -30,6 +30,7 @@
     "firebase": "^12.2.1",
     "firebase-admin": "^11.11.0",
     "flatpickr": "^4.6.13",
+    "helmet": "^8.1.0",
     "highlight.js": "^11.10.0",
     "isotope-layout": "^3.0.6",
     "jquery": "^3.7.1",
