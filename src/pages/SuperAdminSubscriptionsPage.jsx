@@ -11,11 +11,12 @@ export default function SuperAdminSubscriptionsPage() {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all'); // all, active, expired, canceled, none
+  const [filterStatus, setFilterStatus] = useState('all');
   const [updating, setUpdating] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [modalAction, setModalAction] = useState(''); // grant, revoke, extend
+  const [modalAction, setModalAction] = useState(''); // grant, revoke, extend, end_trial
+  const [extendDays, setExtendDays] = useState(7);
 
   // Load users with subscription data
   const loadUsers = useCallback(async () => {
@@ -42,7 +43,6 @@ export default function SuperAdminSubscriptionsPage() {
 
   // Filter users
   const filteredUsers = users.filter(user => {
-    // Only show users who are parents (account_type === 'user')
     if (user.account_type !== 'user') return false;
 
     const matchesSearch = !searchTerm ||
@@ -105,6 +105,7 @@ export default function SuperAdminSubscriptionsPage() {
   function openModal(user, action) {
     setSelectedUser(user);
     setModalAction(action);
+    setExtendDays(7);
     setShowModal(true);
   }
 
@@ -125,7 +126,6 @@ export default function SuperAdminSubscriptionsPage() {
         grantedAt: serverTimestamp(),
       };
 
-      // For trial, use trialStartDate and trialEndDate
       if (plan === 'trial') {
         subscriptionData.trialStartDate = now;
         subscriptionData.trialEndDate = endDate;
@@ -138,7 +138,6 @@ export default function SuperAdminSubscriptionsPage() {
         updatedAt: serverTimestamp(),
       });
 
-      // Update local state
       setUsers(prev => prev.map(u =>
         u.id === selectedUser.id
           ? { ...u, subscription: { ...subscriptionData, currentPeriodEnd: endDate, trialEndDate: plan === 'trial' ? endDate : null } }
@@ -155,7 +154,7 @@ export default function SuperAdminSubscriptionsPage() {
     }
   }
 
-  // Revoke subscription
+  // Revoke/End subscription or trial
   async function handleRevokeSubscription() {
     if (!selectedUser) return;
 
@@ -170,7 +169,6 @@ export default function SuperAdminSubscriptionsPage() {
         updatedAt: serverTimestamp(),
       });
 
-      // Update local state
       setUsers(prev => prev.map(u =>
         u.id === selectedUser.id
           ? { ...u, subscription: { status: 'expired', revokedByAdmin: true } }
@@ -187,7 +185,45 @@ export default function SuperAdminSubscriptionsPage() {
     }
   }
 
-  // Show loading while auth is loading
+  // Extend trial
+  async function handleExtendTrial() {
+    if (!selectedUser || !extendDays) return;
+
+    setUpdating(selectedUser.id);
+    try {
+      const currentEndDate = selectedUser.subscription?.trialEndDate?.toDate
+        ? selectedUser.subscription.trialEndDate.toDate()
+        : new Date(selectedUser.subscription?.trialEndDate || new Date());
+
+      // If trial already expired, start from today
+      const baseDate = currentEndDate < new Date() ? new Date() : currentEndDate;
+      const newEndDate = new Date(baseDate);
+      newEndDate.setDate(newEndDate.getDate() + parseInt(extendDays));
+
+      await updateDoc(doc(db, 'users', selectedUser.id), {
+        'subscription.trialEndDate': newEndDate,
+        'subscription.status': 'trialing',
+        'subscription.extendedByAdmin': true,
+        'subscription.extendedAt': serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+
+      setUsers(prev => prev.map(u =>
+        u.id === selectedUser.id
+          ? { ...u, subscription: { ...u.subscription, trialEndDate: newEndDate, status: 'trialing' } }
+          : u
+      ));
+
+      setShowModal(false);
+      setSelectedUser(null);
+    } catch (e) {
+      console.error('Error extending trial:', e);
+      alert('Failed to extend trial: ' + e.message);
+    } finally {
+      setUpdating(null);
+    }
+  }
+
   if (authLoading) {
     return (
       <div className="d-flex justify-content-center align-items-center min-vh-100">
@@ -389,14 +425,14 @@ export default function SuperAdminSubscriptionsPage() {
                       </td>
                       <td>{user.email || '-'}</td>
                       <td>
-                          {getStatusBadge(user.subscription)}
-                          {user.subscription?.status === 'trialing' && !isTrialExpired(user.subscription) && (
-                            <small className="d-block text-muted">{getTrialDaysRemaining(user.subscription)} days left</small>
-                          )}
-                          {user.subscription?.status === 'trialing' && isTrialExpired(user.subscription) && (
-                            <small className="d-block text-danger">Expired</small>
-                          )}
-                        </td>
+                        {getStatusBadge(user.subscription)}
+                        {user.subscription?.status === 'trialing' && !isTrialExpired(user.subscription) && (
+                          <small className="d-block text-muted">{getTrialDaysRemaining(user.subscription)} days left</small>
+                        )}
+                        {user.subscription?.status === 'trialing' && isTrialExpired(user.subscription) && (
+                          <small className="d-block text-danger">Expired</small>
+                        )}
+                      </td>
                       <td>
                         {user.subscription?.plan ? (
                           <span className="text-capitalize">{user.subscription.plan}</span>
@@ -404,8 +440,43 @@ export default function SuperAdminSubscriptionsPage() {
                       </td>
                       <td>{formatDate(user.subscription?.currentPeriodEnd || user.subscription?.trialEndDate)}</td>
                       <td className="text-center">
-                        <div className="d-flex justify-content-center gap-2">
-                          {(user.subscription?.status === 'active' || user.subscription?.status === 'trialing') ? (
+                        <div className="d-flex justify-content-center gap-1">
+                          {/* Grant Subscription - always available */}
+                          <button
+                            className="btn btn-sm btn-outline-success"
+                            onClick={() => openModal(user, 'grant')}
+                            disabled={updating === user.id}
+                            title="Grant Subscription"
+                          >
+                            <Icon icon="mdi:gift" />
+                          </button>
+
+                          {/* Extend Trial - only for trialing users */}
+                          {user.subscription?.status === 'trialing' && (
+                            <button
+                              className="btn btn-sm btn-outline-info"
+                              onClick={() => openModal(user, 'extend')}
+                              disabled={updating === user.id}
+                              title="Extend Trial"
+                            >
+                              <Icon icon="mdi:clock-plus" />
+                            </button>
+                          )}
+
+                          {/* End Trial - only for trialing users */}
+                          {user.subscription?.status === 'trialing' && (
+                            <button
+                              className="btn btn-sm btn-outline-warning"
+                              onClick={() => openModal(user, 'end_trial')}
+                              disabled={updating === user.id}
+                              title="End Trial"
+                            >
+                              <Icon icon="mdi:clock-remove" />
+                            </button>
+                          )}
+
+                          {/* Revoke - for active subscriptions */}
+                          {user.subscription?.status === 'active' && (
                             <button
                               className="btn btn-sm btn-outline-danger"
                               onClick={() => openModal(user, 'revoke')}
@@ -413,15 +484,6 @@ export default function SuperAdminSubscriptionsPage() {
                               title="Revoke Subscription"
                             >
                               <Icon icon="mdi:cancel" />
-                            </button>
-                          ) : (
-                            <button
-                              className="btn btn-sm btn-outline-success"
-                              onClick={() => openModal(user, 'grant')}
-                              disabled={updating === user.id}
-                              title="Grant Subscription"
-                            >
-                              <Icon icon="mdi:gift" />
                             </button>
                           )}
                         </div>
@@ -435,22 +497,35 @@ export default function SuperAdminSubscriptionsPage() {
         </div>
       </div>
 
-      {/* Grant/Revoke Modal */}
+      {/* Action Modal */}
       {showModal && selectedUser && (
         <div className="modal fade show d-block" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
             <div className="modal-content">
               <div className="modal-header">
                 <h5 className="modal-title">
-                  {modalAction === 'grant' ? (
+                  {modalAction === 'grant' && (
                     <>
                       <Icon icon="mdi:gift" className="me-2 text-success" />
                       Grant Subscription
                     </>
-                  ) : (
+                  )}
+                  {modalAction === 'revoke' && (
                     <>
                       <Icon icon="mdi:cancel" className="me-2 text-danger" />
                       Revoke Subscription
+                    </>
+                  )}
+                  {modalAction === 'extend' && (
+                    <>
+                      <Icon icon="mdi:clock-plus" className="me-2 text-info" />
+                      Extend Trial
+                    </>
+                  )}
+                  {modalAction === 'end_trial' && (
+                    <>
+                      <Icon icon="mdi:clock-remove" className="me-2 text-warning" />
+                      End Trial
                     </>
                   )}
                 </h5>
@@ -463,43 +538,93 @@ export default function SuperAdminSubscriptionsPage() {
               <div className="modal-body">
                 <div className="bg-light p-3 rounded mb-3">
                   <p className="mb-1"><strong>User:</strong> {selectedUser.displayName || '-'}</p>
-                  <p className="mb-0"><strong>Email:</strong> {selectedUser.email || '-'}</p>
+                  <p className="mb-1"><strong>Email:</strong> {selectedUser.email || '-'}</p>
+                  <p className="mb-0"><strong>Current Status:</strong> {selectedUser.subscription?.status || 'None'}</p>
                 </div>
 
-                {modalAction === 'grant' ? (
+                {/* Grant Subscription */}
+                {modalAction === 'grant' && (
                   <>
-                    <p>Select subscription plan to grant:</p>
+                    <p className="fw-medium mb-3">Select subscription to grant:</p>
                     <div className="d-grid gap-2">
                       <button
-                        className="btn btn-outline-primary"
+                        className="btn btn-success"
                         onClick={() => handleGrantSubscription('monthly', 30)}
                         disabled={updating}
                       >
+                        <Icon icon="mdi:calendar-month" className="me-2" />
                         Monthly (30 days)
                       </button>
                       <button
-                        className="btn btn-outline-primary"
+                        className="btn btn-primary"
                         onClick={() => handleGrantSubscription('yearly', 365)}
                         disabled={updating}
                       >
+                        <Icon icon="mdi:calendar" className="me-2" />
                         Yearly (365 days)
                       </button>
                       <button
                         className="btn btn-outline-secondary"
-                        onClick={() => handleGrantSubscription('trial', 7)}
+                        onClick={() => handleGrantSubscription('trial', 14)}
                         disabled={updating}
                       >
-                        Trial (7 days)
+                        <Icon icon="mdi:clock-start" className="me-2" />
+                        Trial (14 days)
                       </button>
                     </div>
                   </>
-                ) : (
+                )}
+
+                {/* Extend Trial */}
+                {modalAction === 'extend' && (
                   <>
-                    <div className="alert alert-danger">
-                      <Icon icon="mdi:warning" className="me-2" />
-                      This will immediately revoke the user's subscription. They will lose access to premium features.
+                    <p className="fw-medium mb-3">How many days to add?</p>
+                    <div className="mb-3">
+                      <div className="d-flex gap-2 mb-3">
+                        {[7, 14, 30].map(days => (
+                          <button
+                            key={days}
+                            className={`btn ${extendDays === days ? 'btn-info' : 'btn-outline-info'} flex-fill`}
+                            onClick={() => setExtendDays(days)}
+                          >
+                            {days} days
+                          </button>
+                        ))}
+                      </div>
+                      <div className="input-group">
+                        <span className="input-group-text">Custom:</span>
+                        <input
+                          type="number"
+                          className="form-control"
+                          value={extendDays}
+                          onChange={(e) => setExtendDays(e.target.value)}
+                          min="1"
+                          max="365"
+                        />
+                        <span className="input-group-text">days</span>
+                      </div>
+                    </div>
+                    <div className="alert alert-info mb-0">
+                      <Icon icon="mdi:information" className="me-2" />
+                      Trial will be extended by <strong>{extendDays} days</strong> from the current end date.
                     </div>
                   </>
+                )}
+
+                {/* End Trial */}
+                {modalAction === 'end_trial' && (
+                  <div className="alert alert-warning">
+                    <Icon icon="mdi:warning" className="me-2" />
+                    This will immediately end the user's trial. They will lose access to premium features until they subscribe.
+                  </div>
+                )}
+
+                {/* Revoke Subscription */}
+                {modalAction === 'revoke' && (
+                  <div className="alert alert-danger">
+                    <Icon icon="mdi:warning" className="me-2" />
+                    This will immediately revoke the user's subscription. They will lose access to premium features.
+                  </div>
                 )}
               </div>
               <div className="modal-footer">
@@ -511,6 +636,29 @@ export default function SuperAdminSubscriptionsPage() {
                 >
                   Cancel
                 </button>
+
+                {modalAction === 'extend' && (
+                  <button
+                    type="button"
+                    className="btn btn-info"
+                    onClick={handleExtendTrial}
+                    disabled={updating || !extendDays}
+                  >
+                    {updating ? 'Extending...' : `Extend by ${extendDays} Days`}
+                  </button>
+                )}
+
+                {modalAction === 'end_trial' && (
+                  <button
+                    type="button"
+                    className="btn btn-warning"
+                    onClick={handleRevokeSubscription}
+                    disabled={updating}
+                  >
+                    {updating ? 'Ending...' : 'End Trial Now'}
+                  </button>
+                )}
+
                 {modalAction === 'revoke' && (
                   <button
                     type="button"
