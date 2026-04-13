@@ -24,6 +24,7 @@ export default function AcceptInvitePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false); // Track registration in progress
 
   // Check if an admin is already logged in
   const [loggedInUser, setLoggedInUser] = useState(null);
@@ -103,6 +104,7 @@ export default function AcceptInvitePage() {
 
     try {
       setBusy(true);
+      setIsRegistering(true); // Prevent "logged in" warning from flashing
 
       // 1) Create the user directly with Firebase Auth (driver invitation - already verified via email)
       const email = String(invite.email || '').toLowerCase().trim();
@@ -167,6 +169,7 @@ export default function AcceptInvitePage() {
       navigate('/invite-success', { replace: true });
     } catch (e) {
       setError(e?.message || 'Failed to accept invite.');
+      setIsRegistering(false); // Reset on error so user can see login warning if needed
     } finally {
       setBusy(false);
     }
@@ -174,8 +177,8 @@ export default function AcceptInvitePage() {
 
   if (loading || checkingAuth) return null;
 
-  // Show warning if an admin is already logged in
-  if (loggedInUser) {
+  // Show warning if an admin is already logged in (but NOT during registration process)
+  if (loggedInUser && !isRegistering) {
     return (
       <section className="container py-5">
         <div className="max-w-600 mx-auto">
