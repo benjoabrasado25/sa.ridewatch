@@ -90,7 +90,6 @@ export default function AcceptInvitePage() {
     if (isExpired) return 'This invite has expired.';
     if (pwd.trim().length < 8) return 'Password must be at least 8 characters.';
     if (!fullName.trim()) return 'Full name is required.';
-    if (phone && !/^[0-9+\-\s()]{7,}$/.test(phone)) return 'Please enter a valid phone number.';
     if (!licenseNo.trim()) return 'License number is required.';
     if (!plateNo.trim()) return 'Plate number is required.';
     return '';
