@@ -138,9 +138,20 @@ export default function AcceptInvitePage() {
       console.log('Driver data to save:', driverData);
 
       // Use set WITHOUT merge to ensure we fully control the document (not merge with bus_company)
-      await setDoc(doc(db, 'users', user.uid), driverData);
+      const userDocRef = doc(db, 'users', user.uid);
+      await setDoc(userDocRef, driverData);
 
-      console.log('Driver document saved successfully');
+      // Verify the document was created correctly
+      const verifySnap = await getDoc(userDocRef);
+      if (!verifySnap.exists()) {
+        throw new Error('Failed to create driver profile. Please try again.');
+      }
+      const savedData = verifySnap.data();
+      if (savedData.account_type !== 'driver') {
+        throw new Error('Driver profile was overwritten. Please contact support.');
+      }
+
+      console.log('Driver document saved and verified successfully:', savedData);
 
       // 3) Mark invite as accepted
       await updateDoc(doc(db, 'invites', token), {
